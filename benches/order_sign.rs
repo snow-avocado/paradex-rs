@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use paradex_rs::{
+use paradex::{
     message::sign_order,
     structs::{OrderRequest, OrderType, Side},
 };
@@ -9,7 +9,7 @@ use starknet_signers::SigningKey;
 
 pub fn order_benchmark(c: &mut Criterion) {
     let order_request = OrderRequest {
-        instruction: paradex_rs::structs::OrderInstruction::IOC,
+        instruction: paradex::structs::OrderInstruction::IOC,
         market: "BTC-USD-PERP".into(),
         price: None,
         side: Side::BUY,

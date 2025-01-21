@@ -6,17 +6,17 @@ use log::info;
 async fn main() {
     simple_logger::init_with_level(log::Level::Info).unwrap();
     let symbol: String = "BTC-USD-PERP".into();
-    let manager = paradex_rs::ws::WebsocketManager::new(paradex_rs::url::URL::Testnet, None).await;
+    let manager = paradex::ws::WebsocketManager::new(paradex::url::URL::Testnet, None).await;
     let summary_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::MarketSummary,
+            paradex::ws::Channel::MarketSummary,
             Box::new(|message| info!("Received message {message:?}")),
         )
         .await
         .unwrap();
     let bbo_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::BBO {
+            paradex::ws::Channel::BBO {
                 market_symbol: symbol.clone(),
             },
             Box::new(|message| info!("Received message {message:?}")),
@@ -25,7 +25,7 @@ async fn main() {
         .unwrap();
     let trades_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Trades {
+            paradex::ws::Channel::Trades {
                 market_symbol: symbol.clone(),
             },
             Box::new(|message| info!("Received message {message:?}")),
@@ -34,7 +34,7 @@ async fn main() {
         .unwrap();
     let orderbook_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::OrderBook {
+            paradex::ws::Channel::OrderBook {
                 market_symbol: symbol.clone(),
                 refresh_rate: "50ms".into(),
                 price_tick: None,
@@ -45,7 +45,7 @@ async fn main() {
         .unwrap();
     let orderbook_deltas_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::OrderBookDeltas {
+            paradex::ws::Channel::OrderBookDeltas {
                 market_symbol: symbol.clone(),
             },
             Box::new(|message| info!("Received message {message:?}")),
@@ -54,7 +54,7 @@ async fn main() {
         .unwrap();
     let funding_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::FundingData {
+            paradex::ws::Channel::FundingData {
                 market_symbol: None,
             },
             Box::new(|message| info!("Received message {message:?}")),

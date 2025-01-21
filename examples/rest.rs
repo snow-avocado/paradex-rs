@@ -1,5 +1,5 @@
 use log::info;
-use paradex_rs::{rest::Client, url::URL};
+use paradex::{rest::Client, url::URL};
 
 #[tokio::main]
 async fn main() {

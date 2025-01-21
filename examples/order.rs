@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use log::info;
-use paradex_rs::{
+use paradex::{
     rest::Client,
     structs::{OrderRequest, OrderType, Side},
     url::URL,
@@ -25,14 +25,14 @@ async fn main() {
     info!("Balance {:?}", client_private.balance().await);
     info!("Positions {:?}", client_private.positions().await);
 
-    let manager = paradex_rs::ws::WebsocketManager::new(
-        paradex_rs::url::URL::Testnet,
+    let manager = paradex::ws::WebsocketManager::new(
+        paradex::url::URL::Testnet,
         Some(Client::new(url, Some(private_key.into())).await.unwrap()),
     )
     .await;
     let orders_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Orders {
+            paradex::ws::Channel::Orders {
                 market_symbol: None,
             },
             Box::new(|message| info!("Received order update {message:?}")),
@@ -41,7 +41,7 @@ async fn main() {
         .unwrap();
     let fills_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Fills {
+            paradex::ws::Channel::Fills {
                 market_symbol: None,
             },
             Box::new(|message| info!("Received fill {message:?}")),
@@ -50,21 +50,21 @@ async fn main() {
         .unwrap();
     let position_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Position,
+            paradex::ws::Channel::Position,
             Box::new(|message| info!("Received position {message:?}")),
         )
         .await
         .unwrap();
     let account_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Account,
+            paradex::ws::Channel::Account,
             Box::new(|message| info!("Received account {message:?}")),
         )
         .await
         .unwrap();
     let balance_id = manager
         .subscribe(
-            paradex_rs::ws::Channel::Balance,
+            paradex::ws::Channel::Balance,
             Box::new(|message| info!("Received balance {message:?}")),
         )
         .await
@@ -73,7 +73,7 @@ async fn main() {
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let order_request = OrderRequest {
-        instruction: paradex_rs::structs::OrderInstruction::IOC,
+        instruction: paradex::structs::OrderInstruction::IOC,
         market: symbol,
         price: None,
         side: Side::BUY,
