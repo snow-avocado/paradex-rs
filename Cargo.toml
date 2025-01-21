@@ -2,6 +2,9 @@
 name = "paradex-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Paradex client library"
+repository  = "https://github.com/snow-avocado/paradex-rs"
 
 [dependencies]
 cached = "0.54.0"
