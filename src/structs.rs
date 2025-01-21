@@ -1,0 +1,626 @@
+use crate::error::{Error, Result};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use starknet_core::utils::cairo_short_string_to_felt;
+use starknet_crypto::Felt;
+use std::str::FromStr;
+
+fn deserialize_string_to_f64<'de, D>(deserializer: D) -> std::result::Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    if s.is_empty() {
+        Ok(f64::NAN)
+    } else {
+        f64::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+fn deserialize_optional_string_to_f64<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<f64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // First deserialize to an Option<String>
+    let opt_str = Option::<String>::deserialize(deserializer)?;
+
+    // Handle the Option
+    match opt_str {
+        None => Ok(None),
+        Some(s) if s.is_empty() => Ok(None),
+        Some(s) => f64::from_str(&s)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
+}
+
+fn serialize_f64_as_string<S>(value: &f64, serializer: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&value.to_string())
+}
+
+fn serialize_optional_f64_as_string<S>(
+    value: &Option<f64>,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match value {
+        None => Ok(serializer.serialize_unit())?,
+        Some(float) => serializer.serialize_str(&float.to_string()),
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BridgedToken {
+    pub decimals: u32,
+    pub l1_bridge_address: String,
+    pub l1_token_address: String,
+    pub l2_bridge_address: String,
+    pub l2_token_address: String,
+    pub name: String,
+    pub symbol: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SystemConfig {
+    pub block_explorer_url: String,
+    pub bridged_tokens: Vec<BridgedToken>,
+    pub environment: String,
+    pub l1_chain_id: String,
+    pub l1_core_contract_address: String,
+    pub l1_operator_address: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub liquidation_fee: f64,
+    pub oracle_address: String,
+    pub paraclear_account_hash: String,
+    pub paraclear_account_proxy_hash: String,
+    pub paraclear_address: String,
+    pub paraclear_decimals: u32,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub partial_liquidation_buffer: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub partial_liquidation_share_increment: f64,
+    pub starknet_chain_id: String,
+    pub starknet_fullnode_rpc_url: String,
+    pub starknet_gateway_url: String,
+    pub universal_deployer_address: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct JWTToken {
+    pub jwt_token: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MarketSummary {
+    pub symbol: String,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub mark_price: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub last_traded_price: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub bid: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub ask: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub volume_24: Option<f64>,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub total_volume: f64,
+    pub created_at: u64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub underlying_price: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub open_interest: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub funding_rate: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub price_change_rate_24h: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub bid_iv: Option<f64>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub ask_iv: Option<f64>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub last_iv: Option<f64>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub delta: Option<f64>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BBO {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub bid: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub bid_size: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub ask: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub ask_size: f64,
+
+    pub market: String,
+    pub last_updated_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Side {
+    BUY,
+    SELL,
+}
+
+impl Side {
+    pub fn felt(&self) -> Felt {
+        match self {
+            Side::BUY => Felt::ONE,
+            Side::SELL => Felt::TWO,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TradeType {
+    FILL,
+    LIQUIDATION,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Trade {
+    pub created_at: u64,
+    pub id: String,
+    pub market: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price: f64,
+    pub side: Side,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub size: f64,
+    pub trade_type: TradeType,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Level {
+    pub side: Side,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub size: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderBook {
+    pub seq_no: u64,
+    pub market: String,
+    pub last_updated_at: u64,
+    pub update_type: String,
+    pub deletes: Vec<Level>,
+    pub inserts: Vec<Level>,
+    pub updates: Vec<Level>,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OrderInstruction {
+    GTC,
+    IOC,
+    POST_ONLY,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OrderStatus {
+    NEW,
+    OPEN,
+    CLOSED,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OrderType {
+    MARKET,
+    LIMIT,
+    STOP_MARKET,
+    STOP_LIMIT,
+    TAKE_PROFIT_LIMIT,
+    TAKE_PROFIT_MARKET,
+    STOP_LOSS_MARKET,
+    STOP_LOSS_LIMIT,
+}
+
+impl OrderType {
+    pub fn felt(&self) -> Result<Felt> {
+        match self {
+            OrderType::MARKET => cairo_short_string_to_felt("MARKET"),
+            OrderType::LIMIT => cairo_short_string_to_felt("LIMIT"),
+            OrderType::STOP_MARKET => cairo_short_string_to_felt("STOP_MARKET"),
+            OrderType::STOP_LIMIT => cairo_short_string_to_felt("STOP_LIMIT"),
+            OrderType::TAKE_PROFIT_LIMIT => cairo_short_string_to_felt("TAKE_PROFIT_LIMIT"),
+            OrderType::TAKE_PROFIT_MARKET => cairo_short_string_to_felt("TAKE_PROFIT_MARKET"),
+            OrderType::STOP_LOSS_MARKET => cairo_short_string_to_felt("STOP_LOSS_MARKET"),
+            OrderType::STOP_LOSS_LIMIT => cairo_short_string_to_felt("STOP_LOSS_LIMIT"),
+        }
+        .map_err(|e| Error::StarknetError(e.to_string()))
+    }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OrderFlags {
+    REDUCE_ONLY,
+    STOP_CONDITION_BELOW_TRIGGER,
+    STOP_CONDITION_ABOVE_TRIGGER,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum STPType {
+    EXPIRE_MAKER,
+    EXPIRE_TAKER,
+    EXPIRE_BOTH,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OrderRequest {
+    pub instruction: OrderInstruction,
+    pub market: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Decimal>,
+    pub side: Side,
+    pub size: Decimal,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    pub flags: Vec<OrderFlags>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recv_window: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stp: Option<STPType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_price: Option<Decimal>,
+}
+
+impl OrderRequest {
+    pub(crate) fn into_order(self, signature: [Felt; 2], signature_timestamp: u128) -> Order {
+        Order {
+            instruction: self.instruction,
+            market: self.market,
+            price: self.price,
+            side: self.side,
+            size: self.size,
+            order_type: self.order_type,
+            client_id: self.client_id,
+            flags: self.flags,
+            recv_window: self.recv_window,
+            stp: self.stp,
+            trigger_price: self.trigger_price,
+            signature,
+            signature_timestamp,
+        }
+    }
+}
+
+fn serialize_signature_as_string<S>(
+    value: &[Felt; 2],
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&format!(
+        r#"["{}","{}"]"#,
+        value[0].to_bigint(),
+        value[1].to_bigint()
+    ))
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Order {
+    pub instruction: OrderInstruction,
+    pub market: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Decimal>,
+    pub side: Side,
+    #[serde(serialize_with = "serialize_signature_as_string")]
+    pub signature: [Felt; 2],
+    pub signature_timestamp: u128,
+    pub size: Decimal,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    pub flags: Vec<OrderFlags>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recv_window: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stp: Option<STPType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_price: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderUpdate {
+    pub account: String,
+    pub cancel_reason: String,
+    pub client_id: String,
+    pub created_at: u64,
+    pub id: String,
+    pub instruction: OrderInstruction,
+    pub last_updated_at: u64,
+    pub market: String,
+    pub price: Option<Decimal>,
+    pub remaining_size: Decimal,
+    pub side: Side,
+    pub size: Decimal,
+    pub status: OrderStatus,
+    pub timestamp: u64,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
+    pub seq_no: u64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub avg_fill_price: f64,
+    pub received_at: u64,
+    pub published_at: u64,
+    pub flags: Vec<OrderFlags>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_price: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FillLiquiduity {
+    TAKER,
+    MAKER,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FillType {
+    FILL,
+    LIQUIDATION,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Fill {
+    pub client_id: String,
+    pub created_at: u64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub fee: f64,
+    pub fee_currency: String,
+    pub id: String,
+    pub liquidity: FillLiquiduity,
+    pub market: String,
+    pub order_id: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price: f64,
+    pub side: Side,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub remaining_size: f64,
+    //pub seq_no : u64, //in paradex documentation, but does not appear to be sent.
+    pub fill_type: FillType,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub realized_pnl: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FundingData {
+    market: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    funding_index: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    funding_premium: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    funding_rate: f64,
+    created_at: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum AccountStatus {
+    ACTIVE,
+    LIQUIDATION,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AccountInformation {
+    pub account: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub account_value: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub free_collateral: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub initial_margin_requirement: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub maintenance_margin_requirement: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub margin_cushion: f64,
+    pub seq_no: u64,
+    pub settlement_asset: String,
+    pub status: AccountStatus,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub total_collateral: f64,
+    pub updated_at: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Balance {
+    pub token: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub size: f64,
+    pub last_updated_at: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Balances {
+    results: Vec<Balance>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum PositionStatus {
+    OPEN,
+    CLOSED,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum PositionSide {
+    SHORT,
+    LONG,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Position {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub average_entry_price: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub average_entry_price_usd: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub cached_funding_index: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub cost: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub cost_usd: f64,
+    pub id: String,
+    pub last_fill_id: String,
+    pub last_updated_at: u64,
+    pub leverage: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub liquidation_price: f64,
+    pub market: String,
+    pub seq_no: u64,
+    pub side: PositionSide,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub size: f64,
+    pub status: PositionStatus,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub unrealized_funding_pnl: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub unrealized_pnl: f64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Positions {
+    pub results: Vec<Position>,
+}
