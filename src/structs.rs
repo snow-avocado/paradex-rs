@@ -242,12 +242,19 @@ pub struct Level {
     pub size: f64,
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum OrderBookUpdateType {
+    s, //snapshot
+    d //delta
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OrderBook {
     pub seq_no: u64,
     pub market: String,
     pub last_updated_at: u64,
-    pub update_type: String,
+    pub update_type: OrderBookUpdateType,
     pub deletes: Vec<Level>,
     pub inserts: Vec<Level>,
     pub updates: Vec<Level>,
