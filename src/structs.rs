@@ -490,13 +490,13 @@ pub struct FundingData {
     created_at: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AccountStatus {
     ACTIVE,
     LIQUIDATION,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AccountInformation {
     pub account: String,
     #[serde(
@@ -535,7 +535,7 @@ pub struct AccountInformation {
     pub updated_at: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Balance {
     pub token: String,
     #[serde(
@@ -546,24 +546,24 @@ pub struct Balance {
     pub last_updated_at: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Balances {
     results: Vec<Balance>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PositionStatus {
     OPEN,
     CLOSED,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PositionSide {
     SHORT,
     LONG,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Position {
     #[serde(
         serialize_with = "serialize_f64_as_string",
@@ -620,7 +620,7 @@ pub struct Position {
     pub unrealized_pnl: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Positions {
     pub results: Vec<Position>,
 }

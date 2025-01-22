@@ -30,7 +30,7 @@ use tokio_tungstenite::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Identifier(u64);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Message {
     //Control Messages
     Connected,
