@@ -1,6 +1,6 @@
 [package]
 name = "paradex"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Paradex client library"
@@ -24,7 +24,6 @@ starknet-signers = "0.10.1"
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features=["full"]}
 tokio-tungstenite = {version = "0.26.1", features=["native-tls"]}
-tokio-util = "0.7.13"
 
 [dev-dependencies]
 criterion = "0.5.1"
