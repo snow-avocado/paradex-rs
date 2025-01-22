@@ -4,11 +4,11 @@ A simple, yet high performance client library for [paradex](https://www.paradex.
 
 Both websocket and rest connectivity are supported. Currently a sub-set of the most important APIs are supported.
 
-##Examples
+## Examples
 
 See [here](https://github.com/snow-avocado/paradex-rs/tree/main/examples) for full examples.
 
-###Simple example for receiving public market Data Over WebSocket
+### Simple example for receiving public market Data Over WebSocket
 
 ```rust,no_run
 #[tokio::main]
