@@ -243,7 +243,7 @@ pub struct Level {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OrderBookUpdateType {
     #[serde(rename = "s")]
     Snapshot,
