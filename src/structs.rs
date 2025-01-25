@@ -480,23 +480,23 @@ pub struct Fill {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FundingData {
-    market: String,
+    pub market: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    funding_index: f64,
+    pub funding_index: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    funding_premium: f64,
+    pub funding_premium: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    funding_rate: f64,
-    created_at: u64,
+    pub funding_rate: f64,
+    pub created_at: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
