@@ -206,6 +206,7 @@ impl Side {
 pub enum TradeType {
     FILL,
     LIQUIDATION,
+    TRANSFER,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
