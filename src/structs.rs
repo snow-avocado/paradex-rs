@@ -57,6 +57,11 @@ where
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ResultsContainer<T> {
+    pub results : T
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BridgedToken {
     pub decimals: u32,
     pub l1_bridge_address: String,
@@ -158,6 +163,113 @@ pub struct MarketSummary {
         serialize_with = "serialize_optional_f64_as_string"
     )]
     pub delta: Option<f64>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum OptionType {
+    CALL,
+    PUT
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Delta1CrossMarginParams {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub imf_base : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub imf_factor : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub imf_shift : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub mmf_factor : f64
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MarketSummaryStatic {
+    pub asset_kind : String,
+    pub base_currency : String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub clamp_rate : f64,
+    pub delta1_cross_margin_params : Delta1CrossMarginParams,
+    pub expiry_at : i64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub interest_rate : f64,
+    pub market_kind : String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub max_funding_rate : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub max_funding_rate_change : f64,
+    pub max_open_orders : i64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub max_order_size : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub max_tob_spread : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub min_notional : f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub option_type : Option<OptionType>,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub oracle_ewma_factor : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub order_size_increment : f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub position_limit : f64,
+    pub price_feed_id : String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price_tick_size : f64,
+    pub quote_currency : String,
+    pub settlement_currency : String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub strike_price : Option<f64>,
+    pub symbol : String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -634,3 +746,4 @@ pub struct Position {
 pub struct Positions {
     pub results: Vec<Position>,
 }
+

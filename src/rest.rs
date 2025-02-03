@@ -10,7 +10,7 @@ use starknet_signers::SigningKey;
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::structs::{
-    AccountInformation, Balances, JWTToken, OrderRequest, OrderUpdate, Positions, SystemConfig, BBO,
+    AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate, Positions, ResultsContainer, SystemConfig, BBO
 };
 use crate::url::URL;
 
@@ -55,8 +55,12 @@ impl Client {
     }
 
     pub async fn system_config(&self) -> Result<SystemConfig> {
-        self.request("/v1/system/config".into(), None::<String>, None)
-            .await
+        self.request("/v1/system/config".into(), None::<String>, None).await
+    }
+
+    pub async fn markets(&self) -> Result<Vec<MarketSummaryStatic>> {
+        self.request("/v1/markets".into(), None::<()>, None).await
+        .map(|result_container : ResultsContainer<Vec<MarketSummaryStatic>> | result_container.results)
     }
 
     pub(crate) fn is_private(&self) -> bool {

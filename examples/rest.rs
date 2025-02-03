@@ -11,6 +11,7 @@ async fn main() {
     let client = Client::new(url, None).await.unwrap();
     info!("system_config {:?}", client.system_config().await);
     info!("BBO {:?}", client.bbo(symbol).await);
+    info!("markets_static {:?}", client.markets().await);
 
     let private_key = "<private key hex string>";
     let mut client_private = Client::new(url, Some(private_key.into())).await.unwrap();
