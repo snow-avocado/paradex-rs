@@ -27,6 +27,7 @@ tokio-tungstenite = {version = "0.26.1", features=["native-tls"]}
 
 [dev-dependencies]
 criterion = "0.5.1"
+mimalloc = "0.1.43"
 
 [profile.bench]
 debug = true

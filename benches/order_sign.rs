@@ -7,6 +7,12 @@ use rust_decimal::{prelude::FromPrimitive, Decimal};
 use starknet_crypto::Felt;
 use starknet_signers::SigningKey;
 
+use mimalloc::MiMalloc;
+
+//10-15% performance improvement with mimalloc vs default allocator
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 pub fn order_benchmark(c: &mut Criterion) {
     let order_request = OrderRequest {
         instruction: paradex::structs::OrderInstruction::IOC,
