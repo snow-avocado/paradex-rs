@@ -65,7 +65,7 @@ impl Client {
         self.request(
             Method::Get,
             "/v1/system/config".into(),
-            None::<String>,
+            None::<()>,
             None,
         )
         .await
@@ -120,7 +120,7 @@ impl Client {
         self.request(
             Method::Get,
             format!("/v1/bbo/{market_symbol}"),
-            None::<String>,
+            None::<()>,
             None,
         )
         .await
@@ -178,7 +178,7 @@ impl Client {
         self.request_auth(
             Method::Delete,
             format!("/v1/orders/?market={market}"),
-            None::<String>,
+            None::<()>,
         )
         .await
     }
