@@ -16,9 +16,9 @@ use crate::structs::{
 use crate::url::URL;
 
 enum Method {
-    GET,
-    POST,
-    DELETE,
+    Get,
+    Post,
+    Delete,
 }
 
 pub struct Client {
@@ -63,7 +63,7 @@ impl Client {
 
     pub async fn system_config(&self) -> Result<SystemConfig> {
         self.request(
-            Method::GET,
+            Method::Get,
             "/v1/system/config".into(),
             None::<String>,
             None,
@@ -72,7 +72,7 @@ impl Client {
     }
 
     pub async fn markets(&self) -> Result<Vec<MarketSummaryStatic>> {
-        self.request(Method::GET, "/v1/markets".into(), None::<()>, None)
+        self.request(Method::Get, "/v1/markets".into(), None::<()>, None)
             .await
             .map(
                 |result_container: ResultsContainer<Vec<MarketSummaryStatic>>| {
@@ -100,7 +100,7 @@ impl Client {
             trace!("Auth Headers {headers:?}");
             let token = self
                 .request::<&'static str, JWTToken>(
-                    Method::POST,
+                    Method::Post,
                     "/v1/auth".into(),
                     Some(""),
                     Some(headers),
@@ -118,7 +118,7 @@ impl Client {
 
     pub async fn bbo(&self, market_symbol: String) -> Result<BBO> {
         self.request(
-            Method::GET,
+            Method::Get,
             format!("/v1/bbo/{market_symbol}"),
             None::<String>,
             None,
@@ -139,13 +139,13 @@ impl Client {
 
         let order = sign_order(order_request, signing_key, timestamp, *l2_chain, *account)?;
 
-        self.request_auth(Method::POST, "/v1/orders".into(), Some(order))
+        self.request_auth(Method::Post, "/v1/orders".into(), Some(order))
             .await
     }
 
     pub async fn cancel_order(&mut self, order_id: String) -> Result<()> {
         match self
-            .request_auth::<(), ()>(Method::DELETE, format!("/v1/orders/{order_id}"), None::<()>)
+            .request_auth::<(), ()>(Method::Delete, format!("/v1/orders/{order_id}"), None::<()>)
             .await
         {
             Ok(_) => Ok(()),
@@ -157,7 +157,7 @@ impl Client {
     pub async fn cancel_order_by_client_id(&mut self, client_order_id: String) -> Result<()> {
         match self
             .request_auth::<(), ()>(
-                Method::DELETE,
+                Method::Delete,
                 format!("/v1/orders/by_client_id/{client_order_id}"),
                 None::<()>,
             )
@@ -170,13 +170,13 @@ impl Client {
     }
 
     pub async fn cancel_all_orders(&mut self) -> Result<Vec<String>> {
-        self.request_auth(Method::DELETE, "/v1/orders".into(), None::<()>)
+        self.request_auth(Method::Delete, "/v1/orders".into(), None::<()>)
             .await
     }
 
     pub async fn cancel_all_orders_for_market(&mut self, market: String) -> Result<Vec<String>> {
         self.request_auth(
-            Method::DELETE,
+            Method::Delete,
             format!("/v1/orders/?market={market}"),
             None::<String>,
         )
@@ -184,17 +184,17 @@ impl Client {
     }
 
     pub async fn account_information(&mut self) -> Result<AccountInformation> {
-        self.request_auth(Method::GET, "/v1/account".into(), None::<()>)
+        self.request_auth(Method::Get, "/v1/account".into(), None::<()>)
             .await
     }
 
     pub async fn balance(&mut self) -> Result<Balances> {
-        self.request_auth(Method::GET, "/v1/balance".into(), None::<()>)
+        self.request_auth(Method::Get, "/v1/balance".into(), None::<()>)
             .await
     }
 
     pub async fn positions(&mut self) -> Result<Positions> {
-        self.request_auth(Method::GET, "/v1/positions".into(), None::<()>)
+        self.request_auth(Method::Get, "/v1/positions".into(), None::<()>)
             .await
     }
 
@@ -220,9 +220,9 @@ impl Client {
         let url = format!("{}{path}", self.url.rest());
 
         let mut request = match method {
-            Method::GET => self.client.get(url),
-            Method::POST => self.client.post(url),
-            Method::DELETE => self.client.delete(url),
+            Method::Get => self.client.get(url),
+            Method::Post => self.client.post(url),
+            Method::Delete => self.client.delete(url),
         };
 
         if let Some(body_object) = body {
