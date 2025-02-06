@@ -10,9 +10,16 @@ use starknet_signers::SigningKey;
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::structs::{
-    AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate, Positions, ResultsContainer, SystemConfig, BBO
+    AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate,
+    Positions, ResultsContainer, SystemConfig, BBO,
 };
 use crate::url::URL;
+
+enum Method {
+    Get,
+    Post,
+    Delete,
+}
 
 pub struct Client {
     url: URL,
@@ -55,12 +62,23 @@ impl Client {
     }
 
     pub async fn system_config(&self) -> Result<SystemConfig> {
-        self.request("/v1/system/config".into(), None::<String>, None).await
+        self.request(
+            Method::Get,
+            "/v1/system/config".into(),
+            None::<String>,
+            None,
+        )
+        .await
     }
 
     pub async fn markets(&self) -> Result<Vec<MarketSummaryStatic>> {
-        self.request("/v1/markets".into(), None::<()>, None).await
-        .map(|result_container : ResultsContainer<Vec<MarketSummaryStatic>> | result_container.results)
+        self.request(Method::Get, "/v1/markets".into(), None::<()>, None)
+            .await
+            .map(
+                |result_container: ResultsContainer<Vec<MarketSummaryStatic>>| {
+                    result_container.results
+                },
+            )
     }
 
     pub(crate) fn is_private(&self) -> bool {
@@ -81,7 +99,12 @@ impl Client {
             let (timestamp, headers) = auth_headers(l2_chain, signing_key, account)?;
             trace!("Auth Headers {headers:?}");
             let token = self
-                .request::<&'static str, JWTToken>("/v1/auth".into(), Some(""), Some(headers))
+                .request::<&'static str, JWTToken>(
+                    Method::Post,
+                    "/v1/auth".into(),
+                    Some(""),
+                    Some(headers),
+                )
                 .await
                 .map(|s| s.jwt_token)?;
             self.jwt = Some((timestamp, token));
@@ -94,8 +117,13 @@ impl Client {
     }
 
     pub async fn bbo(&self, market_symbol: String) -> Result<BBO> {
-        self.request(format!("/v1/bbo/{market_symbol}"), None::<String>, None)
-            .await
+        self.request(
+            Method::Get,
+            format!("/v1/bbo/{market_symbol}"),
+            None::<String>,
+            None,
+        )
+        .await
     }
 
     pub async fn create_order(&mut self, order_request: OrderRequest) -> Result<OrderUpdate> {
@@ -111,44 +139,95 @@ impl Client {
 
         let order = sign_order(order_request, signing_key, timestamp, *l2_chain, *account)?;
 
-        self.request_auth("/v1/orders".into(), Some(order)).await
+        self.request_auth(Method::Post, "/v1/orders".into(), Some(order))
+            .await
+    }
+
+    pub async fn cancel_order(&mut self, order_id: String) -> Result<()> {
+        match self
+            .request_auth::<(), ()>(Method::Delete, format!("/v1/orders/{order_id}"), None::<()>)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(Error::RestEmptyResponse) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn cancel_order_by_client_id(&mut self, client_order_id: String) -> Result<()> {
+        match self
+            .request_auth::<(), ()>(
+                Method::Delete,
+                format!("/v1/orders/by_client_id/{client_order_id}"),
+                None::<()>,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(Error::RestEmptyResponse) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn cancel_all_orders(&mut self) -> Result<Vec<String>> {
+        self.request_auth(Method::Delete, "/v1/orders".into(), None::<()>)
+            .await
+    }
+
+    pub async fn cancel_all_orders_for_market(&mut self, market: String) -> Result<Vec<String>> {
+        self.request_auth(
+            Method::Delete,
+            format!("/v1/orders/?market={market}"),
+            None::<String>,
+        )
+        .await
     }
 
     pub async fn account_information(&mut self) -> Result<AccountInformation> {
-        self.request_auth("/v1/account".into(), None::<()>).await
+        self.request_auth(Method::Get, "/v1/account".into(), None::<()>)
+            .await
     }
 
     pub async fn balance(&mut self) -> Result<Balances> {
-        self.request_auth("/v1/balance".into(), None::<()>).await
+        self.request_auth(Method::Get, "/v1/balance".into(), None::<()>)
+            .await
     }
 
     pub async fn positions(&mut self) -> Result<Positions> {
-        self.request_auth("/v1/positions".into(), None::<()>).await
+        self.request_auth(Method::Get, "/v1/positions".into(), None::<()>)
+            .await
     }
 
     async fn request_auth<B: serde::Serialize, T: for<'de> serde::Deserialize<'de>>(
         &mut self,
+        method: Method,
         path: String,
         body: Option<B>,
     ) -> Result<T> {
         let jwt = self.jwt().await?;
         let mut header_map: HeaderMap<HeaderValue> = HeaderMap::with_capacity(1);
         header_map.insert("Authorization", format!("Bearer {jwt}").parse().unwrap());
-        self.request(path, body, Some(header_map)).await
+        self.request(method, path, body, Some(header_map)).await
     }
 
     async fn request<B: serde::Serialize, T: for<'de> serde::Deserialize<'de>>(
         &self,
+        method: Method,
         path: String,
         body: Option<B>,
         additional_headers: Option<HeaderMap<HeaderValue>>,
     ) -> Result<T> {
         let url = format!("{}{path}", self.url.rest());
-        let mut request = if let Some(body_object) = body {
-            self.client.post(url).json(&body_object)
-        } else {
-            self.client.get(url)
+
+        let mut request = match method {
+            Method::Get => self.client.get(url),
+            Method::Post => self.client.post(url),
+            Method::Delete => self.client.delete(url),
         };
+
+        if let Some(body_object) = body {
+            request = request.json(&body_object);
+        }
 
         request = request.header("Accept", "application/json");
 
@@ -164,6 +243,11 @@ impl Client {
             .text()
             .await
             .map_err(|e| Error::RestError(e.to_string()))?;
+
+        if text.is_empty() {
+            return Err(Error::RestEmptyResponse);
+        }
+
         serde_json::from_str(&text)
             .map_err(|e| Error::DeserializationError(format!("Text: {text} Error: {e:?}")))
     }

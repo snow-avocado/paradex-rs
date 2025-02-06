@@ -8,6 +8,8 @@ pub enum Error {
     JsonParseError(String),
     #[error("Rest Error: {0:?}")]
     RestError(String),
+    #[error("Rest Empty Response")]
+    RestEmptyResponse,
     #[error("Deserialization Error: {0:?}")]
     DeserializationError(String),
     #[error("Starknet Error: {0:?}")]
