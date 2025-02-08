@@ -14,7 +14,7 @@ async fn main() {
     info!("markets_static {:?}", client.markets().await);
 
     let private_key = "<private key hex string>";
-    let mut client_private = Client::new(url, Some(private_key.into())).await.unwrap();
+    let client_private = Client::new(url, Some(private_key.into())).await.unwrap();
 
     info!("JWT {:?}", client_private.jwt().await);
 }

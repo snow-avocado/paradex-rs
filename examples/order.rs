@@ -16,7 +16,7 @@ async fn main() {
     let symbol: String = "BTC-USD-PERP".into();
 
     let private_key = "<private key hex string>";
-    let mut client_private = Client::new(url, Some(private_key.into())).await.unwrap();
+    let client_private = Client::new(url, Some(private_key.into())).await.unwrap();
 
     info!(
         "Account Information {:?}",
@@ -90,6 +90,8 @@ async fn main() {
     info!("Order result {result:?}");
 
     tokio::time::sleep(Duration::from_secs(5)).await;
+
+    client_private.cancel_order(result.id).await.unwrap();
 
     for id in [orders_id, fills_id, position_id, account_id, balance_id] {
         manager.unsubscribe(id).await.unwrap();
