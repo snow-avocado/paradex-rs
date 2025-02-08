@@ -91,7 +91,7 @@ async fn main() {
 
     tokio::time::sleep(Duration::from_secs(5)).await;
 
-    let _ = client_private.cancel_order(result.id).await.unwrap();
+    client_private.cancel_order(result.id).await.unwrap();
 
     for id in [orders_id, fills_id, position_id, account_id, balance_id] {
         manager.unsubscribe(id).await.unwrap();
