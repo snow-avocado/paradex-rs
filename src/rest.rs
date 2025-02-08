@@ -154,7 +154,7 @@ impl Client {
         let (ts, _jwt) = &*lock;
         SystemTime::now()
             .duration_since(*ts)
-            .map_or(false, |duration| duration.as_secs() > JWT_UPDATE_INTERVAL)
+            .map_or(true, |duration| duration.as_secs() > JWT_UPDATE_INTERVAL)
     }
 
     /// Refresh the current JWT token
