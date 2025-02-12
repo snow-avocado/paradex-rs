@@ -25,6 +25,9 @@ enum Method {
     Delete,
 }
 
+/// Rest client following the paradex spec
+/// The client does not need to be wrapped in an Rc or Arc to re-use. The client can instead be Cloned which will re-use the sample internal components which are already wrapped in Arc.
+#[derive(Clone)]
 pub struct Client {
     url: URL,
     client: reqwest::Client,
