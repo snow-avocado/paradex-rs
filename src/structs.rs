@@ -747,3 +747,9 @@ pub struct Positions {
     pub results: Vec<Position>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)] // Important for handling different JSON structures
+pub(crate) enum RestResponse<T> {
+    Success(T),
+    Error { error : String, message: String },
+}

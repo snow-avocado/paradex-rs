@@ -13,7 +13,7 @@ use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::structs::{
     AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate,
-    Positions, ResultsContainer, SystemConfig, BBO,
+    Positions, RestResponse, ResultsContainer, SystemConfig, BBO,
 };
 use crate::url::URL;
 
@@ -468,7 +468,12 @@ impl Client {
             return Err(Error::RestEmptyResponse);
         }
 
-        serde_json::from_str(&text)
-            .map_err(|e| Error::DeserializationError(format!("Text: {text} Error: {e:?}")))
+        let result = serde_json::from_str::<RestResponse<T>>(&text)
+            .map_err(|e| Error::DeserializationError(format!("Text: {text} Error: {e:?}")))?;
+
+        match result {
+            RestResponse::Success(response) => Ok(response),
+            RestResponse::Error { error, message } => Err(Error::ParadexError { error, message }),
+        }
     }
 }

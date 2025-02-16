@@ -20,6 +20,8 @@ pub enum Error {
     TimeError(String),
     #[error("Missing Private Key")]
     MissingPrivateKey,
+    #[error("Paradex Error: error={error:?}, message={message:?}")]
+    ParadexError { error: String, message: String },
 }
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
