@@ -13,7 +13,7 @@ use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::structs::{
     AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate,
-    Positions, RestResponse, ResultsContainer, SystemConfig, BBO,
+    OrderUpdates, Positions, RestResponse, ResultsContainer, SystemConfig, BBO,
 };
 use crate::url::URL;
 
@@ -343,6 +343,20 @@ impl Client {
             None::<()>,
         )
         .await
+    }
+
+    /// Get all open orders
+    ///
+    /// # Returns
+    ///
+    /// An OrderUpdates struct representing the open orders
+    ///
+    /// # Errors
+    ///
+    /// If open orders cannot be retrieved
+    pub async fn open_orders(&self) -> Result<OrderUpdates> {
+        self.request_auth(Method::Get, "/v1/orders".into(), None::<()>)
+            .await
     }
 
     /// Get the Account Information

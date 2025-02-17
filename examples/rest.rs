@@ -17,4 +17,5 @@ async fn main() {
     let client_private = Client::new(url, Some(private_key.into())).await.unwrap();
 
     info!("JWT {:?}", client_private.jwt().await);
+    info!("Open Orders {:?}", client_private.open_orders().await);
 }

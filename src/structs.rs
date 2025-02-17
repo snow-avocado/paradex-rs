@@ -545,6 +545,11 @@ pub struct OrderUpdate {
     pub trigger_price: Option<Decimal>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderUpdates {
+    results : Vec<OrderUpdate>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum FillLiquiduity {
     TAKER,
