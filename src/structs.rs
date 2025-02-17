@@ -753,8 +753,7 @@ pub struct Positions {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)] // Important for handling different JSON structures
-pub(crate) enum RestResponse<T> {
-    Success(T),
-    Error { error : String, message: String },
+pub(crate) struct RestError {
+    pub error: String,
+    pub message: String
 }

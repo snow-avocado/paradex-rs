@@ -13,7 +13,7 @@ use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::structs::{
     AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate,
-    OrderUpdates, Positions, RestResponse, ResultsContainer, SystemConfig, BBO,
+    OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig, BBO,
 };
 use crate::url::URL;
 
@@ -473,21 +473,32 @@ impl Client {
             .send()
             .await
             .map_err(|e| Error::RestError(e.to_string()))?;
+        let status = result.status();
         let text = result
             .text()
             .await
             .map_err(|e| Error::RestError(e.to_string()))?;
 
-        if text.is_empty() {
-            return Err(Error::RestEmptyResponse);
-        }
-
-        let result = serde_json::from_str::<RestResponse<T>>(&text)
-            .map_err(|e| Error::DeserializationError(format!("Text: {text} Error: {e:?}")))?;
-
-        match result {
-            RestResponse::Success(response) => Ok(response),
-            RestResponse::Error { error, message } => Err(Error::ParadexError { error, message }),
+        if status.is_success() {
+            if text.is_empty() {
+                Err(Error::RestEmptyResponse)
+            } else {
+                Ok(serde_json::from_str::<T>(&text).map_err(|e| {
+                    Error::DeserializationError(format!("Text: {text} Error: {e:?}"))
+                })?)
+            }
+        } else if text.is_empty() {
+            Err(Error::HTTPError {
+                status_code: status,
+            })
+        } else {
+            let paradex_error = serde_json::from_str::<RestError>(&text)
+                .map_err(|e| Error::DeserializationError(format!("Text: {text} Error: {e:?}")))?;
+            Err(Error::ParadexError {
+                status_code: status,
+                error: paradex_error.error,
+                message: paradex_error.message,
+            })
         }
     }
 }

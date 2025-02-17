@@ -73,12 +73,12 @@ async fn main() {
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let order_request = OrderRequest {
-        instruction: paradex::structs::OrderInstruction::IOC,
+        instruction: paradex::structs::OrderInstruction::GTC,
         market: symbol,
-        price: None,
+        price: Decimal::from_f64(90000.0),
         side: Side::BUY,
-        size: Decimal::from_f64(0.001).unwrap(),
-        order_type: OrderType::MARKET,
+        size: Decimal::from_f64(0.005).unwrap(),
+        order_type: OrderType::LIMIT,
         client_id: Some("A".into()),
         flags: vec![],
         recv_window: None,
@@ -91,7 +91,7 @@ async fn main() {
 
     tokio::time::sleep(Duration::from_secs(5)).await;
 
-    client_private.cancel_order(result.id).await.unwrap();
+    info!("Cancel Order Result {:?}", client_private.cancel_order(result.id.clone()).await);
 
     for id in [orders_id, fills_id, position_id, account_id, balance_id] {
         manager.unsubscribe(id).await.unwrap();

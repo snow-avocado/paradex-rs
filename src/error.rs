@@ -1,3 +1,4 @@
+use reqwest::StatusCode;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -20,8 +21,10 @@ pub enum Error {
     TimeError(String),
     #[error("Missing Private Key")]
     MissingPrivateKey,
-    #[error("Paradex Error: error={error:?}, message={message:?}")]
-    ParadexError { error: String, message: String },
+    #[error("Paradex Error: status_code={status_code:?} error={error:?}, message={message:?}")]
+    ParadexError { status_code : StatusCode, error: String, message: String },
+    #[error("HTTP Error: status_code={status_code:?}")]
+    HTTPError { status_code: StatusCode }
 }
 
 pub(crate) type Result<T> = std::result::Result<T, Error>;
