@@ -19,9 +19,9 @@ use crate::url::URL;
 
 const JWT_UPDATE_INTERVAL: u64 = 240;
 
-enum Method {
-    Get,
-    Post,
+enum Method<Body: serde::Serialize> {
+    Get(Vec<(String, String)>),
+    Post(Body),
     Delete,
 }
 
@@ -92,7 +92,7 @@ impl Client {
     ///
     /// If the system configuration cannot be retrieved
     pub async fn system_config(&self) -> Result<SystemConfig> {
-        self.request(Method::Get, "/v1/system/config".into(), None::<()>, None)
+        self.request(Method::Get::<()>(vec![]), "/v1/system/config".into(), None)
             .await
     }
 
@@ -106,7 +106,7 @@ impl Client {
     ///
     /// If the markets cannot be retrieved
     pub async fn markets(&self) -> Result<Vec<MarketSummaryStatic>> {
-        self.request(Method::Get, "/v1/markets".into(), None::<()>, None)
+        self.request(Method::Get::<()>(vec![]), "/v1/markets".into(), None)
             .await
             .map(
                 |result_container: ResultsContainer<Vec<MarketSummaryStatic>>| {
@@ -192,9 +192,8 @@ impl Client {
             trace!("Auth Headers {headers:?}");
             let token = self
                 .request::<&'static str, JWTToken>(
-                    Method::Post,
+                    Method::Post(""),
                     "/v1/auth".into(),
-                    Some(""),
                     Some(headers),
                 )
                 .await
@@ -219,9 +218,8 @@ impl Client {
     /// If the BBO cannot be retrieved
     pub async fn bbo(&self, market_symbol: String) -> Result<BBO> {
         self.request(
-            Method::Get,
+            Method::Get::<()>(vec![]),
             format!("/v1/bbo/{market_symbol}"),
-            None::<()>,
             None,
         )
         .await
@@ -253,7 +251,7 @@ impl Client {
 
         let order = sign_order(order_request, signing_key, timestamp, *l2_chain, *account)?;
 
-        self.request_auth(Method::Post, "/v1/orders".into(), Some(order))
+        self.request_auth(Method::Post(order), "/v1/orders".into())
             .await
     }
 
@@ -272,7 +270,7 @@ impl Client {
     /// If the order cannot be cancelled
     pub async fn cancel_order(&self, order_id: String) -> Result<()> {
         match self
-            .request_auth::<(), ()>(Method::Delete, format!("/v1/orders/{order_id}"), None::<()>)
+            .request_auth::<(), ()>(Method::Delete, format!("/v1/orders/{order_id}"))
             .await
         {
             Ok(_) => Ok(()),
@@ -299,7 +297,6 @@ impl Client {
             .request_auth::<(), ()>(
                 Method::Delete,
                 format!("/v1/orders/by_client_id/{client_order_id}"),
-                None::<()>,
             )
             .await
         {
@@ -319,7 +316,7 @@ impl Client {
     ///
     /// If the orders cannot be cancelled
     pub async fn cancel_all_orders(&self) -> Result<Vec<String>> {
-        self.request_auth(Method::Delete, "/v1/orders".into(), None::<()>)
+        self.request_auth(Method::Delete::<()>, "/v1/orders".into())
             .await
     }
 
@@ -338,9 +335,8 @@ impl Client {
     /// If the orders cannot be cancelled
     pub async fn cancel_all_orders_for_market(&self, market: String) -> Result<Vec<String>> {
         self.request_auth(
-            Method::Delete,
+            Method::Delete::<()>,
             format!("/v1/orders/?market={market}"),
-            None::<()>,
         )
         .await
     }
@@ -355,7 +351,7 @@ impl Client {
     ///
     /// If open orders cannot be retrieved
     pub async fn open_orders(&self) -> Result<OrderUpdates> {
-        self.request_auth(Method::Get, "/v1/orders".into(), None::<()>)
+        self.request_auth(Method::Get::<()>(vec![]), "/v1/orders".into())
             .await
     }
 
@@ -369,7 +365,7 @@ impl Client {
     ///
     /// If the account information cannot be retrieved
     pub async fn account_information(&self) -> Result<AccountInformation> {
-        self.request_auth(Method::Get, "/v1/account".into(), None::<()>)
+        self.request_auth(Method::Get::<()>(vec![]), "/v1/account".into())
             .await
     }
 
@@ -383,7 +379,7 @@ impl Client {
     ///
     /// If the balances cannot be retrieved
     pub async fn balance(&self) -> Result<Balances> {
-        self.request_auth(Method::Get, "/v1/balance".into(), None::<()>)
+        self.request_auth(Method::Get::<()>(vec![]), "/v1/balance".into())
             .await
     }
 
@@ -397,7 +393,7 @@ impl Client {
     ///
     /// If the positions cannot be retrieved
     pub async fn positions(&self) -> Result<Positions> {
-        self.request_auth(Method::Get, "/v1/positions".into(), None::<()>)
+        self.request_auth(Method::Get::<()>(vec![]), "/v1/positions".into())
             .await
     }
 
@@ -418,14 +414,13 @@ impl Client {
     /// If the request cannot be completed
     async fn request_auth<B: serde::Serialize, T: for<'de> serde::Deserialize<'de>>(
         &self,
-        method: Method,
+        method: Method<B>,
         path: String,
-        body: Option<B>,
     ) -> Result<T> {
         let jwt = self.jwt().await?;
         let mut header_map: HeaderMap<HeaderValue> = HeaderMap::with_capacity(1);
         header_map.insert("Authorization", format!("Bearer {jwt}").parse().unwrap());
-        self.request(method, path, body, Some(header_map)).await
+        self.request(method, path, Some(header_map)).await
     }
 
     /// Perform a REST API request with optional additional headers
@@ -446,22 +441,17 @@ impl Client {
     /// If the request cannot be completed
     async fn request<B: serde::Serialize, T: for<'de> serde::Deserialize<'de>>(
         &self,
-        method: Method,
+        method: Method<B>,
         path: String,
-        body: Option<B>,
         additional_headers: Option<HeaderMap<HeaderValue>>,
     ) -> Result<T> {
         let url = format!("{}{path}", self.url.rest());
 
         let mut request = match method {
-            Method::Get => self.client.get(url),
-            Method::Post => self.client.post(url),
+            Method::Get(params) => self.client.get(url).query(&params),
+            Method::Post(body) => self.client.post(url).json(&body),
             Method::Delete => self.client.delete(url),
         };
-
-        if let Some(body_object) = body {
-            request = request.json(&body_object);
-        }
 
         request = request.header("Accept", "application/json");
 
