@@ -13,9 +13,9 @@ use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
 use crate::{
     structs::{
-        AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken, MarketSummaryStatic,
-        OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError, ResultsContainer,
-        SystemConfig, BBO,
+        AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken,
+        MarketSummaryStatic, OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError,
+        ResultsContainer, SystemConfig, BBO,
     },
     url::URL,
 };

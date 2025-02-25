@@ -58,7 +58,7 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ResultsContainer<T> {
-    pub results : T
+    pub results: T,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -168,7 +168,7 @@ pub struct MarketSummary {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum OptionType {
     CALL,
-    PUT
+    PUT,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -177,99 +177,99 @@ pub struct Delta1CrossMarginParams {
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub imf_base : f64,
+    pub imf_base: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub imf_factor : f64,
+    pub imf_factor: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub imf_shift : f64,
+    pub imf_shift: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub mmf_factor : f64
+    pub mmf_factor: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MarketSummaryStatic {
-    pub asset_kind : String,
-    pub base_currency : String,
+    pub asset_kind: String,
+    pub base_currency: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub clamp_rate : f64,
-    pub delta1_cross_margin_params : Delta1CrossMarginParams,
-    pub expiry_at : i64,
+    pub clamp_rate: f64,
+    pub delta1_cross_margin_params: Delta1CrossMarginParams,
+    pub expiry_at: i64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub interest_rate : f64,
-    pub market_kind : String,
+    pub interest_rate: f64,
+    pub market_kind: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub max_funding_rate : f64,
+    pub max_funding_rate: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub max_funding_rate_change : f64,
-    pub max_open_orders : i64,
+    pub max_funding_rate_change: f64,
+    pub max_open_orders: i64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub max_order_size : f64,
+    pub max_order_size: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub max_tob_spread : f64,
+    pub max_tob_spread: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub min_notional : f64,
+    pub min_notional: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub option_type : Option<OptionType>,
+    pub option_type: Option<OptionType>,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub oracle_ewma_factor : f64,
+    pub oracle_ewma_factor: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub order_size_increment : f64,
+    pub order_size_increment: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub position_limit : f64,
-    pub price_feed_id : String,
+    pub position_limit: f64,
+    pub price_feed_id: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
-    pub price_tick_size : f64,
-    pub quote_currency : String,
-    pub settlement_currency : String,
+    pub price_tick_size: f64,
+    pub quote_currency: String,
+    pub settlement_currency: String,
     #[serde(
         default,
         deserialize_with = "deserialize_optional_string_to_f64",
         serialize_with = "serialize_optional_f64_as_string"
     )]
-    pub strike_price : Option<f64>,
-    pub symbol : String,
+    pub strike_price: Option<f64>,
+    pub symbol: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -361,7 +361,7 @@ pub enum OrderBookUpdateType {
     #[serde(rename = "s")]
     Snapshot,
     #[serde(rename = "d")]
-    Delta
+    Delta,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -547,7 +547,7 @@ pub struct OrderUpdate {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OrderUpdates {
-    results : Vec<OrderUpdate>,
+    results: Vec<OrderUpdate>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -681,6 +681,49 @@ pub struct AccountInformation {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BalanceEvent {
+    pub fill_id: String,
+    pub market: String,
+    pub status: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub settlement_asset_balance_before: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub settlement_asset_balance_after: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub settlement_asset_price: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub funding_index: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub realized_pnl: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub fees: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub realized_funding: f64,
+    pub created_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Balance {
     pub token: String,
     #[serde(
@@ -773,12 +816,12 @@ pub struct Positions {
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct RestError {
     pub error: String,
-    pub message: String
+    pub message: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CursorResult<T> {
-    pub next : Option<String>,
-    pub prev : Option<String>,
-    pub results : Vec<T>,
+    pub next: Option<String>,
+    pub prev: Option<String>,
+    pub results: Vec<T>,
 }

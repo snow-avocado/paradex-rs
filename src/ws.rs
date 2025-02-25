@@ -1,4 +1,4 @@
-use crate::structs::{AccountInformation, Balance, FundingPayment, Position};
+use crate::structs::{AccountInformation, BalanceEvent, FundingPayment, Position};
 use crate::url::URL;
 use crate::{
     error::{self, Error, Result},
@@ -51,7 +51,7 @@ pub enum Message {
     Fills(Fill),
     Position(Position),
     Account(AccountInformation),
-    Balance(Balance),
+    BalanceEvent(BalanceEvent),
     FundingPayments(FundingPayment),
 }
 
@@ -86,7 +86,7 @@ pub enum Channel {
     },
     Position,
     Account,
-    Balance,
+    BalanceEvents,
     FundingPayments {
         market_symbol: Option<String>,
     },
@@ -142,7 +142,7 @@ impl Channel {
             ),
             Channel::Position => "positions".into(),
             Channel::Account => "account".into(),
-            Channel::Balance => "balance_events".into(),
+            Channel::BalanceEvents => "balance_events".into(),
             Channel::FundingPayments { market_symbol } => {
                 format!(
                     "funding_payments.{}",
@@ -202,7 +202,9 @@ impl Channel {
             Channel::Account => {
                 Self::parse_notification::<AccountInformation>(notification, Message::Account)
             }
-            Channel::Balance => Self::parse_notification::<Balance>(notification, Message::Balance),
+            Channel::BalanceEvents => {
+                Self::parse_notification::<BalanceEvent>(notification, Message::BalanceEvent)
+            }
             Channel::FundingPayments { .. } => {
                 Self::parse_notification::<FundingPayment>(notification, Message::FundingPayments)
             }

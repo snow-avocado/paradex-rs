@@ -64,8 +64,8 @@ async fn main() {
         .unwrap();
     let balance_id = manager
         .subscribe(
-            paradex::ws::Channel::Balance,
-            Box::new(|message| info!("Received balance {message:?}")),
+            paradex::ws::Channel::BalanceEvents,
+            Box::new(|message| info!("Received balance event {message:?}")),
         )
         .await
         .unwrap();
