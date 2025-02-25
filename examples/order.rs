@@ -15,8 +15,8 @@ async fn main() {
     let url = URL::Testnet;
     let symbol: String = "BTC-USD-PERP".into();
 
-    let private_key = "<private key hex string>";
-    let client_private = Client::new(url, Some(private_key.into())).await.unwrap();
+    let private_key = std::env::var("PRIVATE_KEY").expect("PRIVATE_KEY not set");
+    let client_private = Client::new(url, Some(private_key.clone())).await.unwrap();
 
     info!(
         "Account Information {:?}",
@@ -27,7 +27,7 @@ async fn main() {
 
     let manager = paradex::ws::WebsocketManager::new(
         paradex::url::URL::Testnet,
-        Some(Client::new(url, Some(private_key.into())).await.unwrap()),
+        Some(Client::new(url, Some(private_key)).await.unwrap()),
     )
     .await;
     let orders_id = manager
@@ -69,6 +69,13 @@ async fn main() {
         )
         .await
         .unwrap();
+    let funding_payments_id = manager
+    .subscribe(
+        paradex::ws::Channel::FundingPayments { market_symbol: None },
+        Box::new(|message| info!("Received funding payment {message:?}")),
+    )
+    .await
+    .unwrap();
 
     tokio::time::sleep(Duration::from_secs(2)).await;
 
@@ -76,7 +83,7 @@ async fn main() {
         instruction: paradex::structs::OrderInstruction::GTC,
         market: symbol,
         price: Decimal::from_f64(90000.0),
-        side: Side::BUY,
+        side: Side::SELL,
         size: Decimal::from_f64(0.005).unwrap(),
         order_type: OrderType::LIMIT,
         client_id: Some("A".into()),
@@ -89,11 +96,11 @@ async fn main() {
     let result = client_private.create_order(order_request).await.unwrap();
     info!("Order result {result:?}");
 
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    tokio::time::sleep(Duration::from_secs(30)).await;
 
     info!("Cancel Order Result {:?}", client_private.cancel_order(result.id.clone()).await);
 
-    for id in [orders_id, fills_id, position_id, account_id, balance_id] {
+    for id in [orders_id, fills_id, position_id, account_id, balance_id, funding_payments_id] {
         manager.unsubscribe(id).await.unwrap();
     }
 

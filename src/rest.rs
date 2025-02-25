@@ -11,11 +11,14 @@ use tokio::sync::RwLock;
 
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_order};
-use crate::structs::{
-    AccountInformation, Balances, JWTToken, MarketSummaryStatic, OrderRequest, OrderUpdate,
-    OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig, BBO,
+use crate::{
+    structs::{
+        AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken, MarketSummaryStatic,
+        OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError, ResultsContainer,
+        SystemConfig, BBO,
+    },
+    url::URL,
 };
-use crate::url::URL;
 
 const JWT_UPDATE_INTERVAL: u64 = 240;
 
@@ -334,11 +337,8 @@ impl Client {
     ///
     /// If the orders cannot be cancelled
     pub async fn cancel_all_orders_for_market(&self, market: String) -> Result<Vec<String>> {
-        self.request_auth(
-            Method::Delete::<()>,
-            format!("/v1/orders/?market={market}"),
-        )
-        .await
+        self.request_auth(Method::Delete::<()>, format!("/v1/orders/?market={market}"))
+            .await
     }
 
     /// Get all open orders
@@ -395,6 +395,70 @@ impl Client {
     pub async fn positions(&self) -> Result<Positions> {
         self.request_auth(Method::Get::<()>(vec![]), "/v1/positions".into())
             .await
+    }
+
+    pub async fn fills(
+        &self,
+        market: Option<String>,
+        start: Option<chrono::DateTime<chrono::Utc>>,
+        end: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<Fill>> {
+        self.request_cursor("/v1/fills".to_string(), market, start, end)
+            .await
+    }
+
+    pub async fn funding_payments(
+        &self,
+        market: Option<String>,
+        start: Option<chrono::DateTime<chrono::Utc>>,
+        end: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<FundingPayment>> {
+        self.request_cursor("/v1/funding/payments".to_string(), market, start, end)
+            .await
+    }
+
+    pub async fn request_cursor<T: for<'de> serde::Deserialize<'de>>(
+        &self,
+        path: String,
+        market: Option<String>,
+        start: Option<chrono::DateTime<chrono::Utc>>,
+        end: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<T>> {
+        let mut result = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let mut params: Vec<(String, String)> =
+                vec![("page_size".to_string(), "5000".to_string())];
+            if let Some(market_name) = &market {
+                params.push(("market".to_string(), market_name.clone()));
+            }
+            if let Some(start_time) = start {
+                params.push((
+                    "start_at".to_string(),
+                    start_time.timestamp_millis().to_string(),
+                ));
+            }
+            if let Some(end_time) = end {
+                params.push((
+                    "end_at".to_string(),
+                    end_time.timestamp_millis().to_string(),
+                ));
+            }
+            if let Some(token) = &cursor {
+                params.push(("cursor".to_string(), token.clone()));
+            }
+            let intermediate: CursorResult<T> = self
+                .request_auth(Method::Get::<()>(params), path.clone())
+                .await?;
+            result.extend(intermediate.results);
+
+            if let Some(next) = &intermediate.next {
+                cursor = Some(next.clone());
+            } else {
+                break;
+            }
+        }
+        Ok(result)
     }
 
     /// Perform a REST API request with authentication headers

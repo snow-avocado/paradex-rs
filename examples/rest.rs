@@ -13,9 +13,11 @@ async fn main() {
     info!("BBO {:?}", client.bbo(symbol).await);
     info!("markets_static {:?}", client.markets().await);
 
-    let private_key = "<private key hex string>";
-    let client_private = Client::new(url, Some(private_key.into())).await.unwrap();
+    let private_key = std::env::var("PRIVATE_KEY").expect("PRIVATE_KEY not set");
+    let client_private = Client::new(url, Some(private_key)).await.unwrap();
 
     info!("JWT {:?}", client_private.jwt().await);
     info!("Open Orders {:?}", client_private.open_orders().await);
+    info!("Fills {:?}", client_private.fills(Some("BTC-USD-PERP".to_string()), Some(chrono::Utc::now() - chrono::Duration::days(2)), Some(chrono::Utc::now())).await.unwrap().len());
+    info!("Funding {:?}", client_private.funding_payments(None, None, None).await.unwrap());
 }

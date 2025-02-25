@@ -597,6 +597,24 @@ pub struct Fill {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FundingPayment {
+    pub id: String,
+    pub market: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub payment: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub index: f64,
+    pub fill_id: String,
+    pub created_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FundingData {
     pub market: String,
     #[serde(
@@ -756,4 +774,11 @@ pub struct Positions {
 pub(crate) struct RestError {
     pub error: String,
     pub message: String
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CursorResult<T> {
+    pub next : Option<String>,
+    pub prev : Option<String>,
+    pub results : Vec<T>,
 }
