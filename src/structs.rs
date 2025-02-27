@@ -815,7 +815,7 @@ pub struct Positions {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct RestError {
-    pub error: String,
+    pub error: Option<String>,
     pub message: String,
 }
 
@@ -824,4 +824,17 @@ pub struct CursorResult<T> {
     pub next: Option<String>,
     pub prev: Option<String>,
     pub results: Vec<T>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rate_error() {
+        let text = r#"{"message":"rate limit exceeded"}"#;
+        let error = serde_json::from_str::<RestError>(text).unwrap();
+        assert_eq!(error.message, "rate limit exceeded");
+        assert!(error.error.is_none());
+    }
 }
