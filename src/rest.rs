@@ -10,7 +10,8 @@ use starknet_signers::SigningKey;
 use tokio::sync::RwLock;
 
 use crate::error::{Error, Result};
-use crate::message::{account_address, auth_headers, sign_order};
+use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
+use crate::structs::ModifyOrderRequest;
 use crate::{
     structs::{
         AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken,
@@ -25,6 +26,7 @@ const JWT_UPDATE_INTERVAL: u64 = 240;
 enum Method<Body: serde::Serialize> {
     Get(Vec<(String, String)>),
     Post(Body),
+    Put(Body),
     Delete,
 }
 
@@ -267,7 +269,7 @@ impl Client {
     ///
     /// If the order cannot be created
     pub async fn create_order(&self, order_request: OrderRequest) -> Result<OrderUpdate> {
-        let timestamp = SystemTime::now()
+        let signature_timestamp_ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| Error::TimeError(e.to_string()))?
             .as_millis();
@@ -277,10 +279,47 @@ impl Client {
             .as_ref()
             .ok_or(Error::MissingPrivateKey)?;
 
-        let order = sign_order(order_request, signing_key, timestamp, *l2_chain, *account)?;
+        let signature = sign_order(
+            &order_request,
+            signing_key,
+            signature_timestamp_ms,
+            *l2_chain,
+            *account,
+        )?;
+
+        let order = order_request.into_order([signature.r, signature.s], signature_timestamp_ms);
 
         self.request_auth(Method::Post(order), "/v1/orders".into())
             .await
+    }
+
+    pub async fn modify_order(
+        &self,
+        modify_order_request: ModifyOrderRequest,
+    ) -> Result<OrderUpdate> {
+        let signature_timestamp_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| Error::TimeError(e.to_string()))?
+            .as_millis();
+
+        let (l2_chain, signing_key, account) = self
+            .l2_chain_private_key_account
+            .as_ref()
+            .ok_or(Error::MissingPrivateKey)?;
+
+        let signature = sign_modify_order(
+            &modify_order_request,
+            signing_key,
+            signature_timestamp_ms,
+            *l2_chain,
+            *account,
+        )?;
+
+        let modify_order = modify_order_request
+            .into_modify_order([signature.r, signature.s], signature_timestamp_ms);
+
+        let path = format!("/v1/orders/{}", modify_order.id);
+        self.request_auth(Method::Put(modify_order), path).await
     }
 
     /// Cancel an order on the exchange by order ID
@@ -539,6 +578,7 @@ impl Client {
         let mut request = match method {
             Method::Get(params) => self.client.get(url).query(&params),
             Method::Post(body) => self.client.post(url).json(&body),
+            Method::Put(body) => self.client.put(url).json(&body),
             Method::Delete => self.client.delete(url),
         };
 

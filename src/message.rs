@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::error::{Error, Result};
-use crate::structs::{Order, OrderRequest};
+use crate::structs::{ModifyOrderRequest, OrderRequest};
 use cached::proc_macro::cached;
 use cached::SizedCache;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -13,7 +13,7 @@ use starknet_core::types::Felt;
 use starknet_core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name, starknet_keccak,
 };
-use starknet_crypto::PedersenHasher;
+use starknet_crypto::{PedersenHasher, Signature};
 use starknet_signers::SigningKey;
 
 /*
@@ -184,12 +184,12 @@ static ORDER_TYPE_HASH: LazyLock<Felt> = LazyLock::new(|| {
 });
 
 pub fn sign_order(
-    order_request: OrderRequest,
+    order_request: &OrderRequest,
     signing_key: &SigningKey,
     signature_timestamp_ms: u128,
     chain_id: Felt,
     address: Felt,
-) -> Result<Order> {
+) -> Result<Signature> {
     const QUANTIZE_FACTOR: rust_decimal::Result<Decimal> = Decimal::try_new(10_i64.pow(8), 0);
     let quantize_factor = QUANTIZE_FACTOR.unwrap();
     let price_scaled = if let Some(value) = &order_request.price {
@@ -229,17 +229,84 @@ pub fn sign_order(
     hasher.update(order_hash);
 
     let hash = hasher.finalize();
-    let signature = signing_key
+    signing_key
         .sign(&hash)
-        .map_err(|e| Error::StarknetError(e.to_string()))?;
-    Ok(order_request.into_order([signature.r, signature.s], signature_timestamp_ms))
+        .map_err(|e| Error::StarknetError(e.to_string()))
+}
+
+static MODIFY_ORDER_TYPE_HASH: std::sync::LazyLock<Felt> = std::sync::LazyLock::new(|| {
+    starknet_core::utils::starknet_keccak(
+        "ModifyOrder(timestamp:felt,market:felt,side:felt,orderType:felt,size:felt,price:felt,id:felt)"
+            .as_bytes(),
+    )
+});
+
+fn str_to_felt(s: &str) -> Result<Felt> {
+    if s.chars().all(|c| c.is_ascii_digit()) {
+        Ok(Felt::from_dec_str(s).map_err(|e| Error::StarknetError(e.to_string()))?)
+    } else {
+        Ok(cairo_short_string_to_felt(s)
+            .map_err(|e| Error::StarknetError(e.to_string()))?)
+    }
+}
+
+pub fn sign_modify_order(
+    order_request: &ModifyOrderRequest,
+    signing_key: &SigningKey,
+    signature_timestamp_ms: u128,
+    chain_id: Felt,
+    address: Felt,
+) -> Result<Signature> {
+    const QUANTIZE_FACTOR: rust_decimal::Result<Decimal> = Decimal::try_new(10_i64.pow(8), 0);
+    let quantize_factor = QUANTIZE_FACTOR.unwrap();
+    let price_scaled = if let Some(value) = &order_request.price {
+        (value * quantize_factor).to_i64().ok_or_else(|| {
+            Error::TypeConversionError(format!(
+                "Could not convert order price {:?} to i64 ",
+                order_request.price
+            ))
+        })?
+    } else {
+        0
+    };
+    let size_scaled = (order_request.size * quantize_factor)
+        .to_i64()
+        .ok_or_else(|| {
+            Error::TypeConversionError(format!(
+                "Could not convert order size {} to i64 ",
+                order_request.size
+            ))
+        })?;
+
+    let order_hash = compute_hash_on_elements(&[
+        *MODIFY_ORDER_TYPE_HASH,
+        signature_timestamp_ms.into(),
+        cairo_short_string_to_felt(order_request.market.as_str())
+            .map_err(|e| Error::StarknetError(e.to_string()))?,
+        order_request.side.felt(),
+        order_request.order_type.felt()?,
+        size_scaled.into(),
+        price_scaled.into(),
+        str_to_felt(order_request.id.as_str())?,
+    ]);
+
+    let mut hasher = PedersenHasher::default();
+    hasher.update(STARKNET_MESSAGE_PREFIX);
+    hasher.update(domain_hash(chain_id)?);
+    hasher.update(address);
+    hasher.update(order_hash);
+
+    let hash = hasher.finalize();
+    signing_key
+        .sign(&hash)
+        .map_err(|e| Error::StarknetError(e.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::structs::{OrderInstruction, OrderRequest, OrderType, Side};
+    use crate::structs::{Order, OrderInstruction, OrderRequest, OrderType, Side};
     use rust_decimal::prelude::FromPrimitive;
     use rust_decimal::Decimal;
     use starknet_core::types::Felt;
@@ -319,14 +386,15 @@ mod tests {
         let address = Felt::from_raw([9, 10, 11, 12]);
 
         let result = sign_order(
-            order_request,
+            &order_request,
             &signing_key,
             signature_timestamp_ms,
             chain_id,
             address,
         );
         assert!(result.is_ok());
-        let order = result.unwrap();
+        let signature = result.unwrap();
+        let order = order_request.into_order([signature.r, signature.s], signature_timestamp_ms);
         assert_eq!(
             order,
             Order {

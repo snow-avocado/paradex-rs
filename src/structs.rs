@@ -299,7 +299,7 @@ pub struct BBO {
     pub last_updated_at: u64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Side {
     BUY,
     SELL,
@@ -391,7 +391,7 @@ pub enum OrderStatus {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OrderType {
     MARKET,
     LIMIT,
@@ -512,6 +512,52 @@ pub struct Order {
     pub stp: Option<STPType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_price: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ModifyOrderRequest {
+    pub id: String,
+    pub market: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Decimal>,
+    pub side: Side,
+    pub size: Decimal,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
+}
+
+impl ModifyOrderRequest {
+    pub(crate) fn into_modify_order(
+        self,
+        signature: [Felt; 2],
+        signature_timestamp: u128,
+    ) -> ModifyOrder {
+        ModifyOrder {
+            id: self.id,
+            market: self.market,
+            price: self.price,
+            side: self.side,
+            signature,
+            signature_timestamp,
+            size: self.size,
+            order_type: self.order_type,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ModifyOrder {
+    pub id: String,
+    pub market: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price: Option<Decimal>,
+    pub side: Side,
+    #[serde(serialize_with = "serialize_signature_as_string")]
+    pub signature: [Felt; 2],
+    pub signature_timestamp: u128,
+    pub size: Decimal,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -3,7 +3,7 @@ use std::time::Duration;
 use log::info;
 use paradex::{
     rest::Client,
-    structs::{OrderRequest, OrderType, Side},
+    structs::{ModifyOrderRequest, OrderRequest, OrderType, Side},
     url::URL,
 };
 use rust_decimal::{prelude::FromPrimitive, Decimal};
@@ -80,9 +80,9 @@ async fn main() {
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let order_request = OrderRequest {
-        instruction: paradex::structs::OrderInstruction::GTC,
-        market: symbol,
-        price: Decimal::from_f64(90000.0),
+        instruction: paradex::structs::OrderInstruction::POST_ONLY,
+        market: symbol.clone(),
+        price: Decimal::from_f64(95000.0),
         side: Side::SELL,
         size: Decimal::from_f64(0.005).unwrap(),
         order_type: OrderType::LIMIT,
@@ -96,7 +96,21 @@ async fn main() {
     let result = client_private.create_order(order_request).await.unwrap();
     info!("Order result {result:?}");
 
-    tokio::time::sleep(Duration::from_secs(30)).await;
+    tokio::time::sleep(Duration::from_secs(5)).await;
+
+    let modify_request = ModifyOrderRequest {
+        id: result.id.clone(),
+        market: symbol,
+        price: Decimal::from_f64(92000.0),
+        side: Side::SELL,
+        size: Decimal::from_f64(0.005).unwrap(),
+        order_type: OrderType::LIMIT,
+    };
+    info!("Sending modify order {modify_request:?}");
+    let result = client_private.modify_order(modify_request).await.unwrap();
+    info!("Modify order result {result:?}");
+
+    tokio::time::sleep(Duration::from_secs(5)).await;
 
     info!("Cancel Order Result {:?}", client_private.cancel_order(result.id.clone()).await);
 

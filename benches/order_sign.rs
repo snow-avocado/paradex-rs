@@ -42,7 +42,7 @@ pub fn order_benchmark(c: &mut Criterion) {
             chain_id,
             address,
         ),
-        |b, s| b.iter(|| sign_order(s.0.clone(), &s.1, s.2, s.3, s.4)),
+        |b, s| b.iter(|| sign_order(&s.0, &s.1, s.2, s.3, s.4)),
     );
 }
 
