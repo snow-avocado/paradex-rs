@@ -53,10 +53,35 @@ impl Client {
     /// # Errors
     ///
     /// If the client cannot be created
+    ///
     pub async fn new(url: URL, l2_private_key_hex_str: Option<String>) -> Result<Self> {
+        Self::with_client(reqwest::Client::new(), url, l2_private_key_hex_str).await
+    }
+
+    /// Create a new client instance with a custom reqwest client
+    ///
+    /// # Parameters
+    ///
+    /// * `client` - A reqwest client
+    /// * `url` - A URL struct representing the base URL for the REST API
+    /// * `l2_private_key_hex_str` - An optional string representing the private key for the L2 chain
+    ///
+    /// # Returns
+    ///
+    /// A Result with the new Client instance
+    ///
+    /// # Errors
+    ///
+    /// If the client cannot be created
+    ///
+    pub async fn with_client(
+        client: reqwest::Client,
+        url: URL,
+        l2_private_key_hex_str: Option<String>,
+    ) -> Result<Self> {
         let mut new_client = Self {
             url,
-            client: reqwest::Client::new(),
+            client,
             l2_chain_private_key_account: None,
             jwt: Arc::new(RwLock::new((UNIX_EPOCH, "".to_string()))),
         };
