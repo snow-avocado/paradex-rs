@@ -270,6 +270,7 @@ pub struct MarketSummaryStatic {
     )]
     pub strike_price: Option<f64>,
     pub symbol: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
