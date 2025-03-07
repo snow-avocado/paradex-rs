@@ -165,13 +165,13 @@ pub struct MarketSummary {
     pub delta: Option<f64>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OptionType {
     CALL,
     PUT,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Delta1CrossMarginParams {
     #[serde(
         serialize_with = "serialize_f64_as_string",
@@ -195,7 +195,7 @@ pub struct Delta1CrossMarginParams {
     pub mmf_factor: f64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MarketSummaryStatic {
     pub asset_kind: String,
     pub base_currency: String,
@@ -206,11 +206,18 @@ pub struct MarketSummaryStatic {
     pub clamp_rate: f64,
     pub delta1_cross_margin_params: Delta1CrossMarginParams,
     pub expiry_at: i64,
+    pub funding_period_hours: u16,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub interest_rate: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_to_f64",
+        serialize_with = "serialize_optional_f64_as_string"
+    )]
+    pub iv_bands_width: Option<f64>,
     pub market_kind: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
@@ -255,6 +262,11 @@ pub struct MarketSummaryStatic {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub position_limit: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price_bands_width: f64,
     pub price_feed_id: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
