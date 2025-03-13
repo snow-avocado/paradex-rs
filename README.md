@@ -6,6 +6,9 @@ Both websocket and rest connectivity are supported. Currently a sub-set of the m
 
 The benchmark uses mimalloc as I notice a 10-20% speedup using a mimalloc vs default allocator. Suggest benchmarking on your system / environment.
 
+## Support Me
+If you appreciate this crate, use my paradex referral link for a 5% fee discount. [Click Here](https://app.paradex.trade/r/wisesplicerfc) 
+
 ## Examples
 
 See [here](https://github.com/snow-avocado/paradex-rs/tree/main/examples) for full examples.
