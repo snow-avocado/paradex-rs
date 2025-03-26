@@ -825,7 +825,7 @@ pub struct Balance {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Balances {
-    results: Vec<Balance>,
+    pub results: Vec<Balance>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
