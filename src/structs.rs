@@ -606,7 +606,7 @@ pub struct OrderUpdate {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OrderUpdates {
-    results: Vec<OrderUpdate>,
+    pub results: Vec<OrderUpdate>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
