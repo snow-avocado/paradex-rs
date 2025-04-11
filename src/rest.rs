@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
-use crate::structs::ModifyOrderRequest;
+use crate::structs::{AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse, ModifyOrderRequest};
 use crate::{
     structs::{
         AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken,
@@ -293,6 +293,25 @@ impl Client {
             .await
     }
 
+
+    /// Create an order on the exchange
+    ///
+    /// # Parameters
+    ///
+    /// * `order_request` - An OrderRequest struct representing the order to be created
+    ///
+    /// # Returns
+    ///
+    /// An OrderUpdate struct representing the order that was created
+    ///
+    /// # Errors
+    ///
+    /// If the order cannot be created
+    pub async fn update_account_margin(&self, market: String, account_margin_update: AccountMarginUpdate) -> Result<AccountMarginUpdateResponse> {
+        self.request_auth(Method::Post(account_margin_update), format!("/v1/account/margin/{market}").into())
+            .await
+    }
+
     pub async fn modify_order(
         &self,
         modify_order_request: ModifyOrderRequest,
@@ -430,6 +449,25 @@ impl Client {
     /// If the account information cannot be retrieved
     pub async fn account_information(&self) -> Result<AccountInformation> {
         self.request_auth(Method::Get::<()>(vec![]), "/v1/account".into())
+            .await
+    }
+
+    /// Get the Account margin configuration for a specific market
+    ///
+    /// # Parameters
+    ///
+    /// * `market` - A string representing the market symbol
+    ///
+    /// # Returns
+    ///
+    /// An AccountMarginConfigurations struct representing the account margin configuration
+    ///
+    /// # Errors
+    ///
+    /// If the account information cannot be retrieved
+    pub async fn account_margin_configuration(&self, market: String) -> Result<AccountMarginConfigurations> {
+        let params = vec![("market".to_string(), market)];
+        self.request_auth(Method::Get::<()>(params), "/v1/account/margin".into())
             .await
     }
 
