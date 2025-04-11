@@ -743,7 +743,6 @@ pub struct AccountInformation {
 pub struct MarginConfig {
     pub market: String,
     pub leverage: u64,
-    #[serde(rename = "margin_type")]
     pub margin_type: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub isolated_margin_leverage: Option<u64>,
