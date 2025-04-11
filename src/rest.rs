@@ -466,7 +466,8 @@ impl Client {
     ///
     /// If the account information cannot be retrieved
     pub async fn account_margin_configuration(&self, market: String) -> Result<AccountMarginConfigurations> {
-        self.request_auth(Method::Get::<()>(vec![]), format!("/v1/account/margin/?market={market}"))
+        let params = vec![("market".to_string(), market)];
+        self.request_auth(Method::Get::<()>(params), "/v1/account/margin".into())
             .await
     }
 
