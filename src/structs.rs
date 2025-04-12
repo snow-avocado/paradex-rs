@@ -204,7 +204,8 @@ pub struct MarketSummaryStatic {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub clamp_rate: f64,
-    pub delta1_cross_margin_params: Delta1CrossMarginParams,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta1_cross_margin_params: Option<Delta1CrossMarginParams>,
     pub expiry_at: i64,
     pub funding_period_hours: u16,
     #[serde(
