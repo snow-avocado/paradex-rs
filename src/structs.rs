@@ -741,6 +741,35 @@ pub struct AccountInformation {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MarginConfig {
+    pub market: String,
+    pub leverage: u64,
+    pub margin_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolated_margin_leverage: Option<u64>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AccountMarginConfigurations {
+    pub account: String,
+    pub configs: Vec<MarginConfig>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AccountMarginUpdate {
+    pub leverage: u64,
+    pub margin_type: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AccountMarginUpdateResponse {
+    pub account: String,
+    pub leverage: u64,
+    pub margin_type: String,
+    pub market: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BalanceEvent {
     pub fill_id: String,
     pub market: String,
