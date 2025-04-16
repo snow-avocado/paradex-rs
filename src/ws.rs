@@ -303,7 +303,7 @@ impl WebsocketManager {
                                 Err(e) => {
                                     log::error!(
                                         "Could not retrieve jwt auth token {}",
-                                        e.to_string()
+                                        e
                                     );
                                 }
                             }

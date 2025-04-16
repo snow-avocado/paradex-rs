@@ -308,7 +308,7 @@ impl Client {
     ///
     /// If the order cannot be created
     pub async fn update_account_margin(&self, market: String, account_margin_update: AccountMarginUpdate) -> Result<AccountMarginUpdateResponse> {
-        self.request_auth(Method::Post(account_margin_update), format!("/v1/account/margin/{market}").into())
+        self.request_auth(Method::Post(account_margin_update), format!("/v1/account/margin/{market}"))
             .await
     }
 
