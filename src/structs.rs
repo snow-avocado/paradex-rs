@@ -439,6 +439,7 @@ pub enum OrderFlags {
     REDUCE_ONLY,
     STOP_CONDITION_BELOW_TRIGGER,
     STOP_CONDITION_ABOVE_TRIGGER,
+    INTERACTIVE,
 }
 
 #[allow(non_camel_case_types)]
