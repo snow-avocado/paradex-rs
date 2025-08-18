@@ -332,6 +332,7 @@ impl Side {
 pub enum TradeType {
     FILL,
     LIQUIDATION,
+    RPI,
     TRANSFER,
 }
 

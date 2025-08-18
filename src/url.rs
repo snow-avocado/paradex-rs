@@ -8,7 +8,7 @@ impl URL {
     pub fn rest(&self) -> &str {
         match self {
             URL::Production => "https://api.prod.paradex.trade",
-            URL::Testnet => "	https://api.testnet.paradex.trade",
+            URL::Testnet => "https://api.testnet.paradex.trade",
         }
     }
 
