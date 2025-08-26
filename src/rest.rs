@@ -517,7 +517,7 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<Fill>> {
-        self.request_cursor("/v1/fills".to_string(), market, start, end)
+        self.request_cursor("/v1/fills".to_string(), market, start, end, true)
             .await
     }
 
@@ -527,7 +527,7 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<FundingPayment>> {
-        self.request_cursor("/v1/funding/payments".to_string(), market, start, end)
+        self.request_cursor("/v1/funding/payments".to_string(), market, start, end, true)
             .await
     }
 
@@ -537,7 +537,7 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<Trade>> {
-        self.request_cursor("/v1/trades".to_string(), market, start, end)
+        self.request_cursor("/v1/trades".to_string(), market, start, end, false)
             .await
     }
 
@@ -547,6 +547,7 @@ impl Client {
         market: Option<String>,
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
+        use_auth: bool,
     ) -> Result<Vec<T>> {
         let mut result = Vec::new();
         let mut cursor: Option<String> = None;
@@ -571,9 +572,13 @@ impl Client {
             if let Some(token) = &cursor {
                 params.push(("cursor".to_string(), token.clone()));
             }
-            let intermediate: CursorResult<T> = self
-                .request_auth(Method::Get::<()>(params), path.clone())
-                .await?;
+            let intermediate: CursorResult<T> = if use_auth {
+                self.request_auth(Method::Get::<()>(params), path.clone())
+                    .await?
+            } else {
+                self.request(Method::Get::<()>(params), path.clone(), None)
+                    .await?
+            };
             result.extend(intermediate.results);
 
             if let Some(next) = &intermediate.next {
