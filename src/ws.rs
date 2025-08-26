@@ -3,17 +3,17 @@ use crate::url::URL;
 use crate::{
     error::{self, Error, Result},
     rest::Client,
-    structs::{Fill, FundingData, MarketSummary, OrderBook, OrderUpdate, Trade, BBO},
+    structs::{BBO, Fill, FundingData, MarketSummary, OrderBook, OrderUpdate, Trade},
 };
-use futures_util::{stream::StreamExt, SinkExt};
+use futures_util::{SinkExt, stream::StreamExt};
 use jsonrpsee_core::{params::ObjectParams, traits::ToRpcParams};
 use jsonrpsee_types::{Notification, Response, ResponsePayload};
 use log::{info, trace, warn};
 use serde_json::Value;
 use std::{
     borrow::Cow,
-    collections::{hash_map::Entry, HashMap},
-    sync::{atomic::AtomicU64, Arc},
+    collections::{HashMap, hash_map::Entry},
+    sync::{Arc, atomic::AtomicU64},
     time::Duration,
 };
 use tokio::{
@@ -22,9 +22,8 @@ use tokio::{
     task::spawn,
 };
 use tokio_tungstenite::{
-    connect_async,
+    MaybeTlsStream, WebSocketStream, connect_async,
     tungstenite::{client::IntoClientRequest, http::Uri},
-    MaybeTlsStream, WebSocketStream,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -301,10 +300,7 @@ impl WebsocketManager {
                                     }
                                 }
                                 Err(e) => {
-                                    log::error!(
-                                        "Could not retrieve jwt auth token {}",
-                                        e
-                                    );
+                                    log::error!("Could not retrieve jwt auth token {}", e);
                                 }
                             }
                         }

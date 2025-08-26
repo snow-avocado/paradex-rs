@@ -3,11 +3,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::error::{Error, Result};
 use crate::structs::{ModifyOrderRequest, OrderRequest};
-use cached::proc_macro::cached;
 use cached::SizedCache;
+use cached::proc_macro::cached;
 use reqwest::header::{HeaderMap, HeaderValue};
-use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use starknet_core::crypto::compute_hash_on_elements;
 use starknet_core::types::Felt;
 use starknet_core::utils::{
@@ -245,8 +245,7 @@ fn str_to_felt(s: &str) -> Result<Felt> {
     if s.chars().all(|c| c.is_ascii_digit()) {
         Ok(Felt::from_dec_str(s).map_err(|e| Error::StarknetError(e.to_string()))?)
     } else {
-        Ok(cairo_short_string_to_felt(s)
-            .map_err(|e| Error::StarknetError(e.to_string()))?)
+        Ok(cairo_short_string_to_felt(s).map_err(|e| Error::StarknetError(e.to_string()))?)
     }
 }
 
@@ -307,8 +306,8 @@ mod tests {
     use super::*;
 
     use crate::structs::{Order, OrderInstruction, OrderRequest, OrderType, Side};
-    use rust_decimal::prelude::FromPrimitive;
     use rust_decimal::Decimal;
+    use rust_decimal::prelude::FromPrimitive;
     use starknet_core::types::Felt;
     use starknet_signers::SigningKey;
 
