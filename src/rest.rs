@@ -11,12 +11,15 @@ use tokio::sync::RwLock;
 
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
-use crate::structs::{AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse, ModifyOrderRequest};
+use crate::structs::{
+    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse,
+    ModifyOrderRequest, Trade,
+};
 use crate::{
     structs::{
-        AccountInformation, Balances, CursorResult, Fill, FundingPayment, JWTToken,
+        AccountInformation, BBO, Balances, CursorResult, Fill, FundingPayment, JWTToken,
         MarketSummaryStatic, OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError,
-        ResultsContainer, SystemConfig, BBO,
+        ResultsContainer, SystemConfig,
     },
     url::URL,
 };
@@ -293,7 +296,6 @@ impl Client {
             .await
     }
 
-
     /// Create an order on the exchange
     ///
     /// # Parameters
@@ -307,9 +309,16 @@ impl Client {
     /// # Errors
     ///
     /// If the order cannot be created
-    pub async fn update_account_margin(&self, market: String, account_margin_update: AccountMarginUpdate) -> Result<AccountMarginUpdateResponse> {
-        self.request_auth(Method::Post(account_margin_update), format!("/v1/account/margin/{market}"))
-            .await
+    pub async fn update_account_margin(
+        &self,
+        market: String,
+        account_margin_update: AccountMarginUpdate,
+    ) -> Result<AccountMarginUpdateResponse> {
+        self.request_auth(
+            Method::Post(account_margin_update),
+            format!("/v1/account/margin/{market}"),
+        )
+        .await
     }
 
     pub async fn modify_order(
@@ -465,7 +474,10 @@ impl Client {
     /// # Errors
     ///
     /// If the account information cannot be retrieved
-    pub async fn account_margin_configuration(&self, market: String) -> Result<AccountMarginConfigurations> {
+    pub async fn account_margin_configuration(
+        &self,
+        market: String,
+    ) -> Result<AccountMarginConfigurations> {
         let params = vec![("market".to_string(), market)];
         self.request_auth(Method::Get::<()>(params), "/v1/account/margin".into())
             .await
@@ -505,7 +517,7 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<Fill>> {
-        self.request_cursor("/v1/fills".to_string(), market, start, end)
+        self.request_cursor("/v1/fills".to_string(), market, start, end, true)
             .await
     }
 
@@ -515,7 +527,17 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<FundingPayment>> {
-        self.request_cursor("/v1/funding/payments".to_string(), market, start, end)
+        self.request_cursor("/v1/funding/payments".to_string(), market, start, end, true)
+            .await
+    }
+
+    pub async fn trade_tape(
+        &self,
+        market: Option<String>,
+        start: Option<chrono::DateTime<chrono::Utc>>,
+        end: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<Trade>> {
+        self.request_cursor("/v1/trades".to_string(), market, start, end, false)
             .await
     }
 
@@ -525,6 +547,7 @@ impl Client {
         market: Option<String>,
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
+        use_auth: bool,
     ) -> Result<Vec<T>> {
         let mut result = Vec::new();
         let mut cursor: Option<String> = None;
@@ -549,9 +572,13 @@ impl Client {
             if let Some(token) = &cursor {
                 params.push(("cursor".to_string(), token.clone()));
             }
-            let intermediate: CursorResult<T> = self
-                .request_auth(Method::Get::<()>(params), path.clone())
-                .await?;
+            let intermediate: CursorResult<T> = if use_auth {
+                self.request_auth(Method::Get::<()>(params), path.clone())
+                    .await?
+            } else {
+                self.request(Method::Get::<()>(params), path.clone(), None)
+                    .await?
+            };
             result.extend(intermediate.results);
 
             if let Some(next) = &intermediate.next {

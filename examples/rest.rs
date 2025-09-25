@@ -18,7 +18,30 @@ async fn main() {
 
     info!("JWT {:?}", client_private.jwt().await);
     info!("Open Orders {:?}", client_private.open_orders().await);
-    info!("Fills {:?}", client_private.fills(Some("BTC-USD-PERP".to_string()), Some(chrono::Utc::now() - chrono::Duration::days(2)), Some(chrono::Utc::now())).await.unwrap().len());
-    info!("Funding {:?}", client_private.funding_payments(None, None, None).await.unwrap());
-    info!("Margin Config for BTC-USD-PERP {:?}", client_private.account_margin_configuration("BTC-USD-PERP".to_string()).await.unwrap());
+    info!(
+        "Fills {:?}",
+        client_private
+            .fills(
+                Some("BTC-USD-PERP".to_string()),
+                Some(chrono::Utc::now() - chrono::Duration::days(2)),
+                Some(chrono::Utc::now())
+            )
+            .await
+            .unwrap()
+            .len()
+    );
+    info!(
+        "Funding {:?}",
+        client_private
+            .funding_payments(None, None, None)
+            .await
+            .unwrap()
+    );
+    info!(
+        "Margin Config for BTC-USD-PERP {:?}",
+        client_private
+            .account_margin_configuration("BTC-USD-PERP".to_string())
+            .await
+            .unwrap()
+    );
 }

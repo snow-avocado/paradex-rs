@@ -6,7 +6,7 @@ use paradex::{
     structs::{ModifyOrderRequest, OrderRequest, OrderType, Side},
     url::URL,
 };
-use rust_decimal::{prelude::FromPrimitive, Decimal};
+use rust_decimal::{Decimal, prelude::FromPrimitive};
 
 #[tokio::main]
 async fn main() {
@@ -70,12 +70,14 @@ async fn main() {
         .await
         .unwrap();
     let funding_payments_id = manager
-    .subscribe(
-        paradex::ws::Channel::FundingPayments { market_symbol: None },
-        Box::new(|message| info!("Received funding payment {message:?}")),
-    )
-    .await
-    .unwrap();
+        .subscribe(
+            paradex::ws::Channel::FundingPayments {
+                market_symbol: None,
+            },
+            Box::new(|message| info!("Received funding payment {message:?}")),
+        )
+        .await
+        .unwrap();
 
     tokio::time::sleep(Duration::from_secs(2)).await;
 
@@ -112,9 +114,19 @@ async fn main() {
 
     tokio::time::sleep(Duration::from_secs(5)).await;
 
-    info!("Cancel Order Result {:?}", client_private.cancel_order(result.id.clone()).await);
+    info!(
+        "Cancel Order Result {:?}",
+        client_private.cancel_order(result.id.clone()).await
+    );
 
-    for id in [orders_id, fills_id, position_id, account_id, balance_id, funding_payments_id] {
+    for id in [
+        orders_id,
+        fills_id,
+        position_id,
+        account_id,
+        balance_id,
+        funding_payments_id,
+    ] {
         manager.unsubscribe(id).await.unwrap();
     }
 
