@@ -8,7 +8,7 @@ The benchmark uses mimalloc as I notice a 10-20% speedup using a mimalloc vs def
 
 ## Support Me
 
-If you appreciate this crate, use my paradex referral link for a 5% fee discount. [Click Here](https://app.paradex.trade/r/wisesplicerfc)
+If you appreciate this crate, donate to 0x4a0b9C3781d78BDE1Ca29B216e78f192c636De0f on ethereum or base. Or use my paradex referral link for a 5% fee discount. [Click Here](https://app.paradex.trade/r/wisesplicerfc)
 
 ## Examples
 
