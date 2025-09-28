@@ -613,7 +613,7 @@ pub struct OrderUpdates {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub enum FillLiquiduity {
+pub enum FillLiquidity {
     TAKER,
     MAKER,
 }
@@ -635,7 +635,7 @@ pub struct Fill {
     pub fee: f64,
     pub fee_currency: String,
     pub id: String,
-    pub liquidity: FillLiquiduity,
+    pub liquidity: FillLiquidity,
     pub market: String,
     pub order_id: String,
     #[serde(
@@ -644,6 +644,11 @@ pub struct Fill {
     )]
     pub price: f64,
     pub side: Side,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub size: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
