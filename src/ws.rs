@@ -274,8 +274,8 @@ impl WebsocketManager {
                 .unwrap();
             match connect_async(request).await {
                 Ok((mut connection, _response)) => {
-                    if let Some(client) = rest_client.as_mut() {
-                        if client.is_private() {
+                    if let Some(client) = rest_client.as_mut()
+                        && client.is_private() {
                             match client.jwt().await {
                                 Ok(token) => {
                                     let mut params = ObjectParams::new();
@@ -304,7 +304,6 @@ impl WebsocketManager {
                                 }
                             }
                         }
-                    }
                     return connection;
                 }
                 Err(e) => {
@@ -361,33 +360,28 @@ impl WebsocketManager {
                                 match valid_message {
                                     tokio_tungstenite::tungstenite::Message::Text(text) => {
                                         if let Ok(notification) = serde_json::from_str::<Notification<Value>>(text.as_str()) {
-                                            if let Some(channel_entry) = notification.params.get("channel") {
-                                                if let Some(channel_name) = channel_entry.as_str() {
-                                                    if let Some( (_connected, data) ) = subscriptions_by_channel.get(&Cow::Borrowed(channel_name)) {
-                                                        if let Some( (channel, _, _) ) = data.first() {
+                                            if let Some(channel_entry) = notification.params.get("channel")
+                                                && let Some(channel_name) = channel_entry.as_str()
+                                                    && let Some( (_connected, data) ) = subscriptions_by_channel.get(&Cow::Borrowed(channel_name))
+                                                        && let Some( (channel, _, _) ) = data.first() {
                                                             let channel_message = channel.to_message(notification.clone());
                                                             for (_,_,callback) in data.iter() {
                                                                 callback(&channel_message)
                                                             }
                                                         }
-                                                    }
-                                                }
-                                            }
 
                                         }
                                         else if let Ok(response) = serde_json::from_str::<Response<Value>>(text.as_str()) {
                                             match response.payload {
                                                 ResponsePayload::Success(result) => {
-                                                    if let Some(channel_object) = result.get("channel") {
-                                                        if let Some(channel_name) = channel_object.as_str() {
-                                                            if let Some(value) = subscriptions_by_channel.get_mut(&Cow::Owned(channel_name.to_string())) {
+                                                    if let Some(channel_object) = result.get("channel")
+                                                        && let Some(channel_name) = channel_object.as_str()
+                                                            && let Some(value) = subscriptions_by_channel.get_mut(&Cow::Owned(channel_name.to_string())) {
                                                                 value.0=true;
                                                                 for (_channel, _id, callback) in &value.1 {
                                                                     callback(&Message::Connected);
                                                                 }
                                                             }
-                                                        }
-                                                    }
                                                 }
                                                 ResponsePayload::Error(e) => {
                                                     warn!("Received error response {e:?} message {text:?} ");
@@ -461,11 +455,9 @@ impl WebsocketManager {
                                     if let Some((_,vec)) = subscriptions_by_channel.get_mut(&channel_name) {
                                         let mut elem_index = None;
                                         for idx in 0..vec.len() {
-                                            if let Some( (_, elem_id, _) ) = vec.get(idx) {
-                                                if *elem_id == identifier {
-                                                    elem_index = Some(idx);
-                                                    break;
-                                                }
+                                            if let Some( (_, elem_id, _) ) = vec.get(idx) && *elem_id == identifier {
+                                                elem_index = Some(idx);
+                                                break;
                                             }
                                         }
                                         if let Some(idx) = elem_index {
