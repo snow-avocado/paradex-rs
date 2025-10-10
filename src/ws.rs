@@ -10,6 +10,7 @@ use jsonrpsee_core::{params::ObjectParams, traits::ToRpcParams};
 use jsonrpsee_types::{Notification, Response, ResponsePayload};
 use log::{info, trace, warn};
 use serde_json::Value;
+use std::string::String;
 use std::{
     borrow::Cow,
     collections::{HashMap, hash_map::Entry},
@@ -60,6 +61,7 @@ pub enum Channel {
     MarketSummary,
     OrderBook {
         market_symbol: String,
+        channel_name : Option<String>,
         refresh_rate: String,
         price_tick: Option<String>,
     },
@@ -99,11 +101,13 @@ impl Channel {
             Channel::Trades { market_symbol } => format!("trades.{market_symbol}"),
             Channel::OrderBook {
                 market_symbol,
+                channel_name,
                 refresh_rate,
                 price_tick,
             } => format!(
-                "order_book.{}.snapshot@15@{}{}",
+                "order_book.{}.{}@15@{}{}",
                 market_symbol,
+                channel_name.as_ref().map(|s| s.as_str()).unwrap_or("snapshot"),
                 refresh_rate,
                 if let Some(tick) = price_tick {
                     format!("@{}", tick)
