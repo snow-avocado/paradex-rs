@@ -23,7 +23,7 @@ use tokio::{
     task::spawn,
 };
 use tokio_tungstenite::{
-    MaybeTlsStream, WebSocketStream, connect_async,
+    MaybeTlsStream, WebSocketStream, connect_async_with_config,
     tungstenite::{client::IntoClientRequest, http::Uri},
 };
 
@@ -276,7 +276,7 @@ impl WebsocketManager {
                 .unwrap()
                 .into_client_request()
                 .unwrap();
-            match connect_async(request).await {
+            match connect_async_with_config(request, None, true).await {
                 Ok((mut connection, _response)) => {
                     if let Some(client) = rest_client.as_mut()
                         && client.is_private() {
