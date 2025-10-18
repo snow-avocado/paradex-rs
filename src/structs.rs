@@ -328,12 +328,15 @@ impl Side {
     }
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TradeType {
     FILL,
     LIQUIDATION,
     RPI,
     TRANSFER,
+    SETTLE_MARKET,
+    BLOCK_TRADE,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
