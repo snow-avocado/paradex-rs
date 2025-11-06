@@ -352,6 +352,15 @@ impl WebsocketManager {
             (bool, Vec<(Channel, Identifier, CallbackFn)>),
         > = HashMap::new();
         let mut connection = Self::_connect(url, &mut rest_client).await;
+
+        // Ping/pong configuration (hard-coded for now)
+        // Change these constants here to adjust behavior.
+        const PING_INTERVAL : Duration = Duration::from_secs(30);
+        const MAX_MISSED_PONGS: u32 = 3;
+
+        let mut missed_pongs: u32 = 0;
+        let mut ping_ticker = tokio::time::interval(PING_INTERVAL);
+
         loop {
             tokio::select! {
                 biased;
@@ -396,7 +405,15 @@ impl WebsocketManager {
                                             warn!("Could not parse message {text:?}");
                                         }
                                     }
-                                    tokio_tungstenite::tungstenite::Message::Ping(_) => {},
+                                    tokio_tungstenite::tungstenite::Message::Ping(_) => {
+                                        // incoming ping from server - respond is automatic at tungstenite level, or ignore
+                                        trace!("Received ping from server");
+                                    },
+                                    tokio_tungstenite::tungstenite::Message::Pong(_) => {
+                                        // received pong from server -> reset missed pong counter
+                                        missed_pongs = 0;
+                                        info!("Received pong from server, resetting missed_pongs to 0");
+                                    }
                                     _ => {warn!("Unexpected websocket message {valid_message}")},
                                 }
 
@@ -407,7 +424,6 @@ impl WebsocketManager {
                         }
 
                     }
-
                     else {
                         warn!("Websocket Disconnected");
 
@@ -495,6 +511,29 @@ impl WebsocketManager {
                         }
                     }
                     else { //senders closed. Should we exit?
+                    }
+                }
+
+                _ = ping_ticker.tick() => {
+                    // Send a ping periodically. If we already missed too many pongs, force a reconnect by closing.
+                    if missed_pongs >= MAX_MISSED_PONGS {
+                        warn!("Missed {} pongs (threshold {}), closing connection to reconnect", missed_pongs, MAX_MISSED_PONGS);
+                        if let Err(e) = connection.close(None).await {
+                            warn!("Error closing websocket after missed pongs: {:?}", e);
+                        }
+                        // let the connection drop and the existing reconnection logic handle resubscribe
+                        continue;
+                    }
+
+                    match connection.send(tokio_tungstenite::tungstenite::protocol::Message::Ping(Vec::new().into())).await {
+                        Ok(_) => {
+                            missed_pongs = missed_pongs.saturating_add(1);
+                            info!("Sent ping to websocket; missed_pongs={}", missed_pongs);
+                        }
+                        Err(e) => {
+                            warn!("Error sending ping: {:?}. Closing connection to reconnect", e);
+                            let _ = connection.close(None).await;
+                        }
                     }
                 }
 
