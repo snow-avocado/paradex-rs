@@ -913,6 +913,12 @@ pub struct Positions {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct CancelByMarketResponse {
+    pub market: String,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct RestError {
     pub error: Option<String>,
     pub message: String,

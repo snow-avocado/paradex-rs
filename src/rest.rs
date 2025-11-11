@@ -12,8 +12,7 @@ use tokio::sync::RwLock;
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
 use crate::structs::{
-    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse,
-    ModifyOrderRequest, Trade,
+    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse, CancelByMarketResponse, ModifyOrderRequest, Trade
 };
 use crate::{
     structs::{
@@ -428,7 +427,7 @@ impl Client {
     /// # Errors
     ///
     /// If the orders cannot be cancelled
-    pub async fn cancel_all_orders_for_market(&self, market: String) -> Result<Vec<String>> {
+    pub async fn cancel_all_orders_for_market(&self, market: String) -> Result<CancelByMarketResponse> {
         self.request_auth(Method::Delete::<()>, format!("/v1/orders/?market={market}"))
             .await
     }

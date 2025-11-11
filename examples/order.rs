@@ -8,14 +8,35 @@ use paradex::{
 };
 use rust_decimal::{Decimal, prelude::FromPrimitive};
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(long, action)]
+    production: bool,
+
+    #[arg(long)]
+    private_keyfile: String,
+}
+
 #[tokio::main]
 async fn main() {
     simple_logger::init_with_level(log::Level::Info).unwrap();
 
-    let url = URL::Testnet;
+    let args = Args::parse();
+
+    let url = if args.production {
+        URL::Production
+    } else {
+        URL::Testnet
+    };
     let symbol: String = "BTC-USD-PERP".into();
 
-    let private_key = std::env::var("PRIVATE_KEY").expect("PRIVATE_KEY not set");
+    let private_key = std::fs::read_to_string(args.private_keyfile)
+        .expect("Failed to read private key file")
+        .trim()
+        .to_string();
     let client_private = Client::new(url, Some(private_key.clone())).await.unwrap();
 
     info!(
@@ -85,7 +106,7 @@ async fn main() {
         instruction: paradex::structs::OrderInstruction::POST_ONLY,
         market: symbol.clone(),
         price: Decimal::from_f64(95000.0),
-        side: Side::SELL,
+        side: Side::BUY,
         size: Decimal::from_f64(0.005).unwrap(),
         order_type: OrderType::LIMIT,
         client_id: Some("A".into()),
@@ -102,9 +123,9 @@ async fn main() {
 
     let modify_request = ModifyOrderRequest {
         id: result.id.clone(),
-        market: symbol,
+        market: symbol.clone(),
         price: Decimal::from_f64(92000.0),
-        side: Side::SELL,
+        side: Side::BUY,
         size: Decimal::from_f64(0.005).unwrap(),
         order_type: OrderType::LIMIT,
     };
@@ -118,6 +139,10 @@ async fn main() {
         "Cancel Order Result {:?}",
         client_private.cancel_order(result.id.clone()).await
     );
+
+    info!("Cancel by market orders Result {:?}", client_private.cancel_all_orders_for_market(symbol).await);
+
+    info!("Cancel All Orders Result {:?}", client_private.cancel_all_orders().await);
 
     for id in [
         orders_id,

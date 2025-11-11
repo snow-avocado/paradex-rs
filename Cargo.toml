@@ -26,6 +26,7 @@ tokio-tungstenite = {version = "0.28.0", features=["rustls-tls-native-roots"]}
 rustls = { version = "0.23.33", features = ["aws-lc-rs"] }
 
 [dev-dependencies]
+clap = {version="4.5.51", default-features=false, features=["std", "derive"]}
 simple_logger = "5.1.0"
 criterion = "0.7.0"
 mimalloc = "0.1.47"
