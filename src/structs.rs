@@ -399,6 +399,7 @@ pub enum OrderInstruction {
     GTC,
     IOC,
     POST_ONLY,
+    RPI,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
