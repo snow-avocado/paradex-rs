@@ -426,6 +426,7 @@ impl WebsocketManager {
                     }
                     else {
                         warn!("Websocket Disconnected");
+                        
 
                         for value in subscriptions_by_channel.values_mut() {
                             for (_channel, _id, callback) in &value.1 {
@@ -433,6 +434,7 @@ impl WebsocketManager {
                             }
                         }
 
+                        missed_pongs = 0; 
                         connection = Self::_connect(url, &mut rest_client).await;
                         let requests : Vec<jsonrpsee_types::RequestSer<'static>> = subscriptions_by_channel.iter()
                             .filter_map( |entry| if let Some( (_, identifier, _)) = entry.1.1.first() { Some(Self::request_channel("subscribe", entry.0.to_string(), *identifier))} else {None})
