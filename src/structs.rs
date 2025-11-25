@@ -407,6 +407,7 @@ pub enum OrderStatus {
     NEW,
     OPEN,
     CLOSED,
+    UNTRIGGERED,
 }
 
 #[allow(non_camel_case_types)]
