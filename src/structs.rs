@@ -195,6 +195,88 @@ pub struct Delta1CrossMarginParams {
     pub mmf_factor: f64,
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum KlineResolution {
+    Min1 = 1,
+    Min3 = 3,
+    Min5 = 5,
+    Min15 = 15,
+    Min30 = 30,
+    Hour1 = 60,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum KlinePriceKind {
+    Last,
+    Mark,
+    Underlying,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct KlineParams {
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub start_at: chrono::DateTime<chrono::Utc>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub end_at: chrono::DateTime<chrono::Utc>,
+    pub symbol: String,
+    pub resolution: KlineResolution,
+    pub price_kind: Option<KlinePriceKind>,
+}
+
+impl From<KlineParams> for Vec<(String, String)> {
+    fn from(params: KlineParams) -> Self {
+        let mut vec = vec![
+            (
+                "start_at".to_string(),
+                params.start_at.timestamp_millis().to_string(),
+            ),
+            (
+                "end_at".to_string(),
+                params.end_at.timestamp_millis().to_string(),
+            ),
+            ("symbol".to_string(), params.symbol.clone()),
+            (
+                "resolution".to_string(),
+                (params.resolution as u32).to_string(),
+            ),
+        ];
+        if let Some(price_kind) = &params.price_kind {
+            vec.push((
+                "price_kind".to_string(),
+                format!("{:?}", price_kind).to_lowercase(),
+            ));
+        }
+        vec
+    }
+}
+
+pub type KlineTuple = (i64, f64, f64, f64, f64, f64);
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(from = "KlineTuple")]
+pub struct Kline {
+    pub timestamp_ms: i64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub volume: f64,
+}
+
+impl From<KlineTuple> for Kline {
+    fn from(tuple: KlineTuple) -> Self {
+        Self {
+            timestamp_ms: tuple.0,
+            open: tuple.1,
+            high: tuple.2,
+            low: tuple.3,
+            close: tuple.4,
+            volume: tuple.5,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MarketSummaryStatic {
     pub asset_kind: String,
