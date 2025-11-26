@@ -12,7 +12,8 @@ use tokio::sync::RwLock;
 use crate::error::{Error, Result};
 use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
 use crate::structs::{
-    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse, CancelByMarketResponse, ModifyOrderRequest, Trade
+    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse,
+    CancelByMarketResponse, Kline, KlineParams, ModifyOrderRequest, Trade,
 };
 use crate::{
     structs::{
@@ -145,6 +146,25 @@ impl Client {
                     result_container.results
                 },
             )
+    }
+
+    /// Get the list of Klines for a symbol
+    ///
+    /// # Returns
+    ///
+    /// A vector of Kline structs representing the klines
+    ///
+    /// # Errors
+    ///
+    /// If the klines cannot be retrieved
+    pub async fn klines(&self, params: KlineParams) -> Result<Vec<Kline>> {
+        self.request(
+            Method::Get::<()>(params.into()),
+            "/v1/markets/klines".into(),
+            None,
+        )
+        .await
+        .map(|result_container: ResultsContainer<Vec<Kline>>| result_container.results)
     }
 
     /// Check if the client has a private key set allowing for private API calls
@@ -427,7 +447,10 @@ impl Client {
     /// # Errors
     ///
     /// If the orders cannot be cancelled
-    pub async fn cancel_all_orders_for_market(&self, market: String) -> Result<CancelByMarketResponse> {
+    pub async fn cancel_all_orders_for_market(
+        &self,
+        market: String,
+    ) -> Result<CancelByMarketResponse> {
         self.request_auth(Method::Delete::<()>, format!("/v1/orders/?market={market}"))
             .await
     }

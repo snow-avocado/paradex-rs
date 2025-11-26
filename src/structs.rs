@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 use starknet_core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 use std::str::FromStr;
@@ -193,6 +194,66 @@ pub struct Delta1CrossMarginParams {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub mmf_factor: f64,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum KlineResolution {
+    Min1 = 1,
+    Min3 = 3,
+    Min5 = 5,
+    Min15 = 15,
+    Min30 = 30,
+    Hour1 = 60,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum KlinePriceKind {
+    Last,
+    Mark,
+    Underlying,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct KlineParams {
+    /// Start time in UTC timestamp (milliseconds since epoch)
+    pub start_at: u64,
+    /// End time in UTC timestamp (milliseconds since epoch)
+    pub end_at: u64,
+    pub symbol: String,
+    pub resolution: KlineResolution,
+    pub price_kind: Option<KlinePriceKind>,
+}
+
+impl From<KlineParams> for Vec<(String, String)> {
+    fn from(params: KlineParams) -> Self {
+        let mut vec = vec![
+            ("start_at".to_string(), params.start_at.to_string()),
+            ("end_at".to_string(), params.end_at.to_string()),
+            ("symbol".to_string(), params.symbol.clone()),
+            (
+                "resolution".to_string(),
+                (params.resolution as u32).to_string(),
+            ),
+        ];
+        if let Some(price_kind) = &params.price_kind {
+            vec.push((
+                "price_kind".to_string(),
+                format!("{:?}", price_kind).to_lowercase(),
+            ));
+        }
+        vec
+    }
+}
+
+#[derive(Clone, Debug, Serialize_tuple, Deserialize_tuple, PartialEq)]
+pub struct Kline {
+    pub timestamp_ms: i64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub volume: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
