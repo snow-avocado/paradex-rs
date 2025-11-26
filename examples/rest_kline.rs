@@ -11,16 +11,20 @@ async fn main() {
         .await
         .unwrap();
 
-    // Get and print all available markets
-    let markets = client
+    // Get and print all available klines for BTC-USD-PERP
+    let now = chrono::Utc::now();
+    let start = now - chrono::Duration::weeks(10);
+    let start_ms = start.timestamp_millis() as u64;
+    let end_ms = now.timestamp_millis() as u64;
+    let klines = client
         .klines(KlineParams {
-            start_at: chrono::Utc::now() - chrono::Duration::weeks(10),
-            end_at: chrono::Utc::now(),
+            start_at: start_ms,
+            end_at: end_ms,
             symbol: "BTC-USD-PERP".into(),
             price_kind: Some(paradex::structs::KlinePriceKind::Mark),
             resolution: paradex::structs::KlineResolution::Min30,
         })
         .await
         .unwrap();
-    info!("Markets: {:#?}", markets);
+    info!("klines: {:#?}", klines);
 }

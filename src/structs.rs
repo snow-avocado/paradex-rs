@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 use starknet_core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 use std::str::FromStr;
@@ -215,10 +216,10 @@ pub enum KlinePriceKind {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct KlineParams {
-    #[serde(with = "chrono::serde::ts_milliseconds")]
-    pub start_at: chrono::DateTime<chrono::Utc>,
-    #[serde(with = "chrono::serde::ts_milliseconds")]
-    pub end_at: chrono::DateTime<chrono::Utc>,
+    /// Start time in UTC timestamp (milliseconds since epoch)
+    pub start_at: u64,
+    /// End time in UTC timestamp (milliseconds since epoch)
+    pub end_at: u64,
     pub symbol: String,
     pub resolution: KlineResolution,
     pub price_kind: Option<KlinePriceKind>,
@@ -227,14 +228,8 @@ pub struct KlineParams {
 impl From<KlineParams> for Vec<(String, String)> {
     fn from(params: KlineParams) -> Self {
         let mut vec = vec![
-            (
-                "start_at".to_string(),
-                params.start_at.timestamp_millis().to_string(),
-            ),
-            (
-                "end_at".to_string(),
-                params.end_at.timestamp_millis().to_string(),
-            ),
+            ("start_at".to_string(), params.start_at.to_string()),
+            ("end_at".to_string(), params.end_at.to_string()),
             ("symbol".to_string(), params.symbol.clone()),
             (
                 "resolution".to_string(),
@@ -251,10 +246,7 @@ impl From<KlineParams> for Vec<(String, String)> {
     }
 }
 
-pub type KlineTuple = (i64, f64, f64, f64, f64, f64);
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-#[serde(from = "KlineTuple")]
+#[derive(Clone, Debug, Serialize_tuple, Deserialize_tuple, PartialEq)]
 pub struct Kline {
     pub timestamp_ms: i64,
     pub open: f64,
@@ -262,19 +254,6 @@ pub struct Kline {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
-}
-
-impl From<KlineTuple> for Kline {
-    fn from(tuple: KlineTuple) -> Self {
-        Self {
-            timestamp_ms: tuple.0,
-            open: tuple.1,
-            high: tuple.2,
-            low: tuple.3,
-            close: tuple.4,
-            volume: tuple.5,
-        }
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
