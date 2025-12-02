@@ -1,6 +1,6 @@
 [package]
 name = "paradex"
-version = "0.5.8"
+version = "0.5.9"
 edition = "2024"
 license = "MIT"
 description = "Paradex client library"
@@ -48,7 +48,7 @@ onboarding = [
 [dev-dependencies]
 clap = {version="4.5.53", default-features=false, features=["std", "derive"]}
 simple_logger = "5.1.0"
-criterion = "0.7.0"
+criterion = "0.8.0"
 mimalloc = "0.1.47"
 
 [profile.bench]
