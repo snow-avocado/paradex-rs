@@ -26,8 +26,9 @@ use crate::structs::{
     AccountInformation, AccountMarginConfigurations, AccountMarginUpdate,
     AccountMarginUpdateResponse, BBO, Balances, CancelByMarketResponse, CursorResult, Fill,
     FundingPayment, JWTToken, Kline, KlineParams, MarketSummaryStatic, ModifyOrderRequest,
-    OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig,
-    Trade,
+    OrderBookInteractiveResponse, OrderBookParams, OrderBookResponse, OrderRequest, OrderUpdate,
+    OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig, SystemState,
+    SystemTimeResponse, Trade, Transfer, TransferStatus,
 };
 use crate::url::URL;
 
@@ -179,6 +180,34 @@ impl Client {
             .await
     }
 
+    /// Get the Paradex system state
+    ///
+    /// # Returns
+    ///
+    /// A SystemState struct representing the system state
+    ///
+    /// # Errors
+    ///
+    /// If the system state cannot be retrieved
+    pub async fn system_state(&self) -> Result<SystemState> {
+        self.request(Method::Get::<()>(vec![]), "/v1/system/state".into(), None)
+            .await
+    }
+
+    /// Get the Paradex system time
+    ///
+    /// # Returns
+    ///
+    /// A SystemTimeResponse struct representing the system time
+    ///
+    /// # Errors
+    ///
+    /// If the system time cannot be retrieved
+    pub async fn system_time(&self) -> Result<SystemTimeResponse> {
+        self.request(Method::Get::<()>(vec![]), "/v1/system/time".into(), None)
+            .await
+    }
+
     /// Get the list of markets on the exchange
     ///
     /// # Returns
@@ -215,6 +244,50 @@ impl Client {
         )
         .await
         .map(|result_container: ResultsContainer<Vec<Kline>>| result_container.results)
+    }
+
+    /// Get snapshot of the orderbook for the given market
+    ///
+    /// # Returns
+    ///
+    /// An OrderBookResponse struct representing the orderbook
+    ///
+    /// # Errors
+    ///
+    /// If the orderbook cannot be retrieved
+    pub async fn orderbook(
+        &self,
+        market: String,
+        params: OrderBookParams,
+    ) -> Result<OrderBookResponse> {
+        self.request(
+            Method::Get::<()>(params.into()),
+            format!("/v1/orderbook/{}", market),
+            None,
+        )
+        .await
+    }
+
+    /// Returns orderbook including RPI
+    ///
+    /// # Returns
+    ///
+    /// An OrderBookResponse struct representing the orderbook
+    ///
+    /// # Errors
+    ///
+    /// If the orderbook cannot be retrieved
+    pub async fn orderbook_interactive(
+        &self,
+        market: String,
+        params: OrderBookParams,
+    ) -> Result<OrderBookInteractiveResponse> {
+        self.request(
+            Method::Get::<()>(params.into()),
+            format!("/v1/orderbook/{market}/interactive"),
+            None,
+        )
+        .await
     }
 
     /// Check if the client has a private key set allowing for private API calls
@@ -616,7 +689,21 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<Fill>> {
-        self.request_cursor("/v1/fills".to_string(), market, start, end, true)
+        let filters = market.map(|market| vec![("market".to_string(), market)]);
+
+        self.request_cursor("/v1/fills".to_string(), filters, start, end, true)
+            .await
+    }
+
+    pub async fn transfers(
+        &self,
+        status: Option<TransferStatus>,
+        start: Option<chrono::DateTime<chrono::Utc>>,
+        end: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<Transfer>> {
+        let filters = status.map(|status| vec![("status".to_string(), format!("{status:?}"))]);
+
+        self.request_cursor("/v1/transfers".to_string(), filters, start, end, true)
             .await
     }
 
@@ -626,8 +713,16 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<FundingPayment>> {
-        self.request_cursor("/v1/funding/payments".to_string(), market, start, end, true)
-            .await
+        let filters = market.map(|market| vec![("market".to_string(), market)]);
+
+        self.request_cursor(
+            "/v1/funding/payments".to_string(),
+            filters,
+            start,
+            end,
+            true,
+        )
+        .await
     }
 
     pub async fn trade_tape(
@@ -636,26 +731,30 @@ impl Client {
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<Trade>> {
-        self.request_cursor("/v1/trades".to_string(), market, start, end, false)
+        let filters = market.map(|market| vec![("market".to_string(), market)]);
+
+        self.request_cursor("/v1/trades".to_string(), filters, start, end, false)
             .await
     }
 
+    /// Perform a cursor-based REST API request with optional filters.
+    ///
+    /// * `filters` - Additional query parameters such as market.
     pub async fn request_cursor<T: for<'de> serde::Deserialize<'de>>(
         &self,
         path: String,
-        market: Option<String>,
+        filters: Option<Vec<(String, String)>>,
         start: Option<chrono::DateTime<chrono::Utc>>,
         end: Option<chrono::DateTime<chrono::Utc>>,
         use_auth: bool,
     ) -> Result<Vec<T>> {
         let mut result = Vec::new();
         let mut cursor: Option<String> = None;
+        let filters = filters.unwrap_or_default();
         loop {
             let mut params: Vec<(String, String)> =
                 vec![("page_size".to_string(), "5000".to_string())];
-            if let Some(market_name) = &market {
-                params.push(("market".to_string(), market_name.clone()));
-            }
+            params.extend(filters.iter().cloned());
             if let Some(start_time) = start {
                 params.push((
                     "start_at".to_string(),
