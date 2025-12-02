@@ -1,5 +1,5 @@
 use log::info;
-use paradex::{rest::Client, url::URL};
+use paradex::{rest::Client, structs::OrderBookParams, url::URL};
 
 #[tokio::main]
 async fn main() {
@@ -10,6 +10,8 @@ async fn main() {
     let url = URL::Testnet;
     let client = Client::new(url, None).await.unwrap();
     info!("system_config {:?}", client.system_config().await);
+    info!("system_time {:?}", client.system_time().await);
+    info!("system_state {:?}", client.system_state().await);
     info!("BBO {:?}", client.bbo(symbol).await);
     info!("markets_static {:?}", client.markets().await);
 
@@ -41,6 +43,32 @@ async fn main() {
         "Margin Config for BTC-USD-PERP {:?}",
         client_private
             .account_margin_configuration("BTC-USD-PERP".to_string())
+            .await
+            .unwrap()
+    );
+    info!(
+        "Orderbook Interactive for BTC-USD-PERP {:?}",
+        client_private
+            .orderbook_interactive(
+                "BTC-USD-PERP".to_string(),
+                OrderBookParams {
+                    depth: None,
+                    price_tick: None,
+                }
+            )
+            .await
+            .unwrap()
+    );
+    info!(
+        "Orderbook for BTC-USD-PERP {:?}",
+        client_private
+            .orderbook(
+                "BTC-USD-PERP".to_string(),
+                OrderBookParams {
+                    depth: None,
+                    price_tick: None,
+                }
+            )
             .await
             .unwrap()
     );

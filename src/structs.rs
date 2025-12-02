@@ -2,6 +2,7 @@ use crate::error::{Error, Result};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_tuple::{Deserialize_tuple, Serialize_tuple};
+use serde_with::{DisplayFromStr, serde_as};
 use starknet_core::utils::cairo_short_string_to_felt;
 use starknet_crypto::Felt;
 use std::str::FromStr;
@@ -105,6 +106,26 @@ pub struct SystemConfig {
     pub starknet_fullnode_rpc_url: String,
     pub starknet_gateway_url: String,
     pub universal_deployer_address: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemStatus {
+    Ok,
+    Maintenance,
+    CancelOnly,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SystemState {
+    pub status: SystemStatus,
+}
+
+#[serde_as]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SystemTimeResponse {
+    #[serde_as(as = "DisplayFromStr")]
+    pub server_time: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -304,6 +325,55 @@ pub struct Kline {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OrderBookParams {
+    /// Defaults to 20
+    pub depth: Option<u16>,
+    /// Price tick for aggregation
+    pub price_tick: Option<String>,
+}
+
+impl From<OrderBookParams> for Vec<(String, String)> {
+    fn from(params: OrderBookParams) -> Self {
+        let mut vec = Vec::new();
+        if let Some(depth) = params.depth {
+            vec.push(("depth".to_string(), depth.to_string()));
+        }
+        if let Some(price_tick) = params.price_tick {
+            vec.push(("price_tick".to_string(), price_tick));
+        }
+        vec
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OrderBookResponse {
+    /// List of Ask sizes and prices
+    pub asks: Vec<(String, String)>,
+    /// List of Bid sizes and prices
+    pub bids: Vec<(String, String)>,
+    /// Last update to the orderbook in milliseconds
+    pub last_updated_at: u64,
+    /// Market name
+    pub market: String,
+    /// Sequence number of the orderbook
+    pub seq_no: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OrderBookInteractiveResponse {
+    /// List of Ask sizes and prices
+    pub asks: Vec<(String, String)>,
+    /// Size on the best bid from API (excluding RPI)
+    pub best_bid_api: (String, String),
+    /// Last update to the orderbook in milliseconds
+    pub last_updated_at: u64,
+    /// Market name
+    pub market: String,
+    /// Sequence number of the orderbook
+    pub seq_no: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -777,6 +847,78 @@ pub struct Fill {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub realized_pnl: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TransferStatus {
+    PENDING,
+    AVAILABLE,
+    COMPLETED,
+    FAILED,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TransferBridge {
+    STARKGATE,
+    LAYERSWAP,
+    RHINOFI,
+    HYPERLANE,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TransferDirection {
+    IN,
+    OUT,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TransferKind {
+    DEPOSIT,
+    WITHDRAWAL,
+    UNWINDING,
+    VAULT_DEPOSIT,
+    VAULT_WITHDRAWAL,
+    AUTO_WITHDRAWAL,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Transfer {
+    pub account: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub amount: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub auto_withdrawal_fee: f64,
+    pub bridge: TransferBridge,
+    pub counterparty: String,
+    pub created_at: u64,
+    pub direction: TransferDirection,
+    pub external_account: String,
+    pub external_chain: String,
+    pub external_txn_hash: String,
+    pub failure_reason: String,
+    pub id: String,
+    pub kind: TransferKind,
+    pub last_updated_at: u64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub socialized_loss_factor: f64,
+    pub status: TransferStatus,
+    pub token: String,
+    pub txn_hash: String,
+    pub vault_address: String,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub vault_unwind_completion_percentage: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
