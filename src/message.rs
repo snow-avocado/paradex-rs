@@ -119,6 +119,60 @@ static REQUEST_TYPE_HASH: LazyLock<Felt> = LazyLock::new(|| {
     )
 });
 
+#[cfg(feature = "onboarding")]
+static CONSTANT_TYPE_HASH: LazyLock<Felt> =
+    LazyLock::new(|| starknet_keccak("Constant(action:felt)".as_bytes()));
+
+#[cfg(feature = "onboarding")]
+pub fn onboarding_message_hash(chain_id: Felt, address: Felt) -> Result<Felt> {
+    let constant_hash = compute_hash_on_elements(&[
+        *CONSTANT_TYPE_HASH,
+        cairo_short_string_to_felt("Onboarding")
+            .map_err(|e| Error::StarknetError(e.to_string()))?,
+    ]);
+
+    let mut hasher = PedersenHasher::default();
+    hasher.update(STARKNET_MESSAGE_PREFIX);
+    hasher.update(domain_hash(chain_id)?);
+    hasher.update(address);
+    hasher.update(constant_hash);
+
+    Ok(hasher.finalize())
+}
+
+#[cfg(feature = "onboarding")]
+pub fn onboarding_headers(
+    ethereum_account: &str,
+    l2_chain: &Felt,
+    signing_key: &SigningKey,
+    account: &Felt,
+) -> Result<HeaderMap> {
+    let system_timestamp = SystemTime::now();
+    let timestamp: u128 = system_timestamp
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| Error::TimeError(e.to_string()))?
+        .as_secs()
+        .into();
+
+    let message_hash = crate::message::onboarding_message_hash(*l2_chain, *account)?;
+    let signature = signing_key
+        .sign(&message_hash)
+        .map_err(|e| Error::StarknetError(e.to_string()))?;
+
+    let account_str = account.to_hex_string();
+    let signature_str = format!(r#"["{}","{}"]"#, signature.r, signature.s);
+
+    let mut header_map: HeaderMap<HeaderValue> = HeaderMap::with_capacity(4);
+    header_map.insert(
+        "PARADEX-ETHEREUM-ACCOUNT",
+        ethereum_account.parse().unwrap(),
+    );
+    header_map.insert("PARADEX-STARKNET-ACCOUNT", account_str.parse().unwrap());
+    header_map.insert("PARADEX-STARKNET-SIGNATURE", signature_str.parse().unwrap());
+    header_map.insert("PARADEX-TIMESTAMP", timestamp.to_string().parse().unwrap());
+    Ok(header_map)
+}
+
 pub fn auth_message_hash(
     chain_id: Felt,
     timestamp: u128,

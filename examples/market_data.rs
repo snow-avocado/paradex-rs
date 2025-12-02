@@ -36,7 +36,7 @@ async fn main() {
         .subscribe(
             paradex::ws::Channel::OrderBook {
                 market_symbol: symbol.clone(),
-                channel_name : None,
+                channel_name: None,
                 refresh_rate: "50ms".into(),
                 price_tick: None,
             },
