@@ -9,20 +9,27 @@ use starknet_core::utils::cairo_short_string_to_felt;
 use starknet_signers::SigningKey;
 use tokio::sync::RwLock;
 
+#[cfg(feature = "onboarding")]
+use alloy_signer_local::PrivateKeySigner;
+#[cfg(feature = "onboarding")]
+use serde_json::Value;
+
 use crate::error::{Error, Result};
+#[cfg(feature = "onboarding")]
+use crate::message::onboarding_headers;
 use crate::message::{account_address, auth_headers, sign_modify_order, sign_order};
+#[cfg(feature = "onboarding")]
+use crate::onboarding::get_paradex_private_key;
+#[cfg(feature = "onboarding")]
+use crate::structs::OnboardingRequest;
 use crate::structs::{
-    AccountMarginConfigurations, AccountMarginUpdate, AccountMarginUpdateResponse,
-    CancelByMarketResponse, Kline, KlineParams, ModifyOrderRequest, Trade,
+    AccountInformation, AccountMarginConfigurations, AccountMarginUpdate,
+    AccountMarginUpdateResponse, BBO, Balances, CancelByMarketResponse, CursorResult, Fill,
+    FundingPayment, JWTToken, Kline, KlineParams, MarketSummaryStatic, ModifyOrderRequest,
+    OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig,
+    Trade,
 };
-use crate::{
-    structs::{
-        AccountInformation, BBO, Balances, CursorResult, Fill, FundingPayment, JWTToken,
-        MarketSummaryStatic, OrderRequest, OrderUpdate, OrderUpdates, Positions, RestError,
-        ResultsContainer, SystemConfig,
-    },
-    url::URL,
-};
+use crate::url::URL;
 
 const JWT_UPDATE_INTERVAL: u64 = 240;
 
@@ -61,6 +68,22 @@ impl Client {
     ///
     pub async fn new(url: URL, l2_private_key_hex_str: Option<String>) -> Result<Self> {
         Self::with_client(reqwest::Client::new(), url, l2_private_key_hex_str).await
+    }
+
+    /// Create a new Client instance given an Ethereum private key
+    #[cfg(feature = "onboarding")]
+    pub async fn new_with_eth_private_key(
+        url: URL,
+        eth_private_key_hex_str: String,
+        onboarding_request: Option<OnboardingRequest>,
+    ) -> Result<Self> {
+        Self::with_client_from_eth_private_key(
+            reqwest::Client::new(),
+            url,
+            eth_private_key_hex_str,
+            onboarding_request,
+        )
+        .await
     }
 
     /// Create a new client instance with a custom reqwest client
@@ -113,6 +136,33 @@ impl Client {
             new_client.l2_chain_private_key_account = Some((chain_id, signing_key, account));
         }
         Ok(new_client)
+    }
+
+    /// Create a new client instance from an Ethereum private key with a custom reqwest client
+    #[cfg(feature = "onboarding")]
+    pub async fn with_client_from_eth_private_key(
+        client: reqwest::Client,
+        url: URL,
+        eth_private_key_hex_str: String,
+        onboarding_request: Option<OnboardingRequest>,
+    ) -> Result<Self> {
+        let eth_signer = PrivateKeySigner::from_str(eth_private_key_hex_str.as_str())
+            .map_err(|e| Error::TypeConversionError(e.to_string()))?;
+
+        let paradex_private_key = get_paradex_private_key(&eth_signer);
+        let paradex_signing_key = SigningKey::from_secret_scalar(paradex_private_key);
+        let paradex_public_key_hex = paradex_signing_key.verifying_key().scalar().to_hex_string();
+        let paradex_private_key_hex = paradex_private_key.to_hex_string();
+
+        let client = Self::with_client(client, url, Some(paradex_private_key_hex.clone())).await?;
+
+        let mut request = onboarding_request.unwrap_or_default();
+        request.public_key = paradex_public_key_hex;
+
+        let ethereum_account = format!("{:#x}", eth_signer.address());
+        client.submit_onboarding(&ethereum_account, request).await?;
+
+        Ok(client)
     }
 
     /// Get the Paradex system configuration
@@ -253,6 +303,33 @@ impl Client {
             *lock = (timestamp, token);
         }
         Ok(())
+    }
+
+    /// Submit onboarding information for the current client
+    #[cfg(feature = "onboarding")]
+    async fn submit_onboarding(
+        &self,
+        ethereum_account: &str,
+        request: OnboardingRequest,
+    ) -> Result<()> {
+        let (l2_chain, signing_key, account) = self
+            .l2_chain_private_key_account
+            .as_ref()
+            .ok_or(Error::MissingPrivateKey)?;
+        let headers = onboarding_headers(ethereum_account, l2_chain, signing_key, account)?;
+
+        match self
+            .request::<_, Value>(
+                Method::Post(request),
+                "/v1/onboarding".into(),
+                Some(headers),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(Error::RestEmptyResponse) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     /// Get the current BBO for a market

@@ -140,9 +140,15 @@ async fn main() {
         client_private.cancel_order(result.id.clone()).await
     );
 
-    info!("Cancel by market orders Result {:?}", client_private.cancel_all_orders_for_market(symbol).await);
+    info!(
+        "Cancel by market orders Result {:?}",
+        client_private.cancel_all_orders_for_market(symbol).await
+    );
 
-    info!("Cancel All Orders Result {:?}", client_private.cancel_all_orders().await);
+    info!(
+        "Cancel All Orders Result {:?}",
+        client_private.cancel_all_orders().await
+    );
 
     for id in [
         orders_id,

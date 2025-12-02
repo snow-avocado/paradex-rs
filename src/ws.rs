@@ -61,7 +61,7 @@ pub enum Channel {
     MarketSummary,
     OrderBook {
         market_symbol: String,
-        channel_name : Option<String>,
+        channel_name: Option<String>,
         refresh_rate: String,
         price_tick: Option<String>,
     },
@@ -107,7 +107,10 @@ impl Channel {
             } => format!(
                 "order_book.{}.{}@15@{}{}",
                 market_symbol,
-                channel_name.as_ref().map(|s| s.as_str()).unwrap_or("snapshot"),
+                channel_name
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .unwrap_or("snapshot"),
                 refresh_rate,
                 if let Some(tick) = price_tick {
                     format!("@{}", tick)
@@ -279,35 +282,31 @@ impl WebsocketManager {
             match connect_async_with_config(request, None, true).await {
                 Ok((mut connection, _response)) => {
                     if let Some(client) = rest_client.as_mut()
-                        && client.is_private() {
-                            match client.jwt().await {
-                                Ok(token) => {
-                                    let mut params = ObjectParams::new();
-                                    params.insert("bearer", token).unwrap();
-                                    let request = Self::request(
-                                        "auth",
-                                        jsonrpsee_types::Id::Number(0),
-                                        params,
+                        && client.is_private()
+                    {
+                        match client.jwt().await {
+                            Ok(token) => {
+                                let mut params = ObjectParams::new();
+                                params.insert("bearer", token).unwrap();
+                                let request =
+                                    Self::request("auth", jsonrpsee_types::Id::Number(0), params);
+                                let request_str = serde_json::to_string(&request).unwrap();
+                                if let Err(e) = connection
+                                    .send(tokio_tungstenite::tungstenite::protocol::Message::text(
+                                        request_str,
+                                    ))
+                                    .await
+                                {
+                                    log::error!(
+                                        "Error sending auth request {request:?} error {e:?}"
                                     );
-                                    let request_str = serde_json::to_string(&request).unwrap();
-                                    if let Err(e) = connection
-                                        .send(
-                                            tokio_tungstenite::tungstenite::protocol::Message::text(
-                                                request_str,
-                                            ),
-                                        )
-                                        .await
-                                    {
-                                        log::error!(
-                                            "Error sending auth request {request:?} error {e:?}"
-                                        );
-                                    }
-                                }
-                                Err(e) => {
-                                    log::error!("Could not retrieve jwt auth token {}", e);
                                 }
                             }
+                            Err(e) => {
+                                log::error!("Could not retrieve jwt auth token {}", e);
+                            }
                         }
+                    }
                     return connection;
                 }
                 Err(e) => {
@@ -355,7 +354,7 @@ impl WebsocketManager {
 
         // Ping/pong configuration (hard-coded for now)
         // Change these constants here to adjust behavior.
-        const PING_INTERVAL : Duration = Duration::from_secs(30);
+        const PING_INTERVAL: Duration = Duration::from_secs(30);
         const MAX_MISSED_PONGS: u32 = 3;
 
         let mut missed_pongs: u32 = 0;
@@ -426,7 +425,7 @@ impl WebsocketManager {
                     }
                     else {
                         warn!("Websocket Disconnected");
-                        
+
 
                         for value in subscriptions_by_channel.values_mut() {
                             for (_channel, _id, callback) in &value.1 {
@@ -434,7 +433,7 @@ impl WebsocketManager {
                             }
                         }
 
-                        missed_pongs = 0; 
+                        missed_pongs = 0;
                         connection = Self::_connect(url, &mut rest_client).await;
                         let requests : Vec<jsonrpsee_types::RequestSer<'static>> = subscriptions_by_channel.iter()
                             .filter_map( |entry| if let Some( (_, identifier, _)) = entry.1.1.first() { Some(Self::request_channel("subscribe", entry.0.to_string(), *identifier))} else {None})

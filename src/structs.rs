@@ -112,6 +112,56 @@ pub struct JWTToken {
     pub jwt_token: String,
 }
 
+#[cfg(feature = "onboarding")]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct OnboardingUtm {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub medium: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+}
+
+#[cfg(feature = "onboarding")]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct OnboardingRequest {
+    pub public_key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub marketing_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referral_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm: Option<OnboardingUtm>,
+}
+
+#[cfg(feature = "onboarding")]
+impl OnboardingRequest {
+    pub fn new(public_key_hex: impl Into<String>) -> Self {
+        Self {
+            public_key: public_key_hex.into(),
+            marketing_code: None,
+            referral_code: None,
+            utm: None,
+        }
+    }
+
+    pub fn with_marketing_code(mut self, code: impl Into<String>) -> Self {
+        self.marketing_code = Some(code.into());
+        self
+    }
+
+    pub fn with_referral_code(mut self, code: impl Into<String>) -> Self {
+        self.referral_code = Some(code.into());
+        self
+    }
+
+    pub fn with_utm(mut self, utm: OnboardingUtm) -> Self {
+        self.utm = Some(utm);
+        self
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MarketSummary {
     pub symbol: String,

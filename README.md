@@ -14,6 +14,19 @@ If you appreciate this crate, donate to 0x4a0b9C3781d78BDE1Ca29B216e78f192c636De
 
 See [here](https://github.com/snow-avocado/paradex-rs/tree/main/examples) for full examples.
 
+### Onboarding with an Ethereum private key
+
+Run the onboarding helper (requires the `onboarding` feature) to derive your Paradex Stark key from an Ethereum private key and optionally attach marketing/referral metadata:
+
+```bash
+cargo run --example onboarding --features onboarding -- \
+    --ethereum-private-key <hex> \
+    --marketing-code OPTIONAL_CODE \
+    --referral-code OPTIONAL_REFERRAL
+```
+
+Override the `--utm-*` flags to populate campaign tracking fields, or pass `--production` to talk to mainnet instead of testnet.
+
 ### Simple example for receiving public market Data Over WebSocket
 
 ```rust,no_run
