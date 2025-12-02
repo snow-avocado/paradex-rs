@@ -71,6 +71,7 @@ impl Client {
     }
 
     /// Create a new Client instance given an Ethereum private key
+    /// This will submit an onboarding request and should only need to be done once per private key
     #[cfg(feature = "onboarding")]
     pub async fn new_with_eth_private_key(
         url: URL,
@@ -139,6 +140,7 @@ impl Client {
     }
 
     /// Create a new client instance from an Ethereum private key with a custom reqwest client
+    /// This will submit an onboarding request and should only need to be done once per private key
     #[cfg(feature = "onboarding")]
     pub async fn with_client_from_eth_private_key(
         client: reqwest::Client,
