@@ -627,6 +627,7 @@ pub enum OrderFlags {
     STOP_CONDITION_BELOW_TRIGGER,
     STOP_CONDITION_ABOVE_TRIGGER,
     INTERACTIVE,
+    TARGET_STRATEGY_VWAP,
 }
 
 #[allow(non_camel_case_types)]
@@ -871,6 +872,7 @@ pub enum TransferDirection {
     OUT,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TransferKind {
     DEPOSIT,
