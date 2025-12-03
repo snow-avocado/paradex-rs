@@ -1,16 +1,13 @@
-use crate::structs::{AccountInformation, BalanceEvent, FundingPayment, Position};
 use crate::url::URL;
 use crate::{
-    error::{self, Error, Result},
+    error::{Error, Result},
     rest::Client,
-    structs::{BBO, Fill, FundingData, MarketSummary, OrderBook, OrderUpdate, Trade},
 };
 use futures_util::{SinkExt, stream::StreamExt};
 use jsonrpsee_core::{params::ObjectParams, traits::ToRpcParams};
 use jsonrpsee_types::{Notification, Response, ResponsePayload};
 use log::{info, trace, warn};
 use serde_json::Value;
-use std::string::String;
 use std::{
     borrow::Cow,
     collections::{HashMap, hash_map::Entry},
@@ -27,196 +24,16 @@ use tokio_tungstenite::{
     tungstenite::{client::IntoClientRequest, http::Uri},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Identifier(u64);
+mod subscription;
+mod types;
 
-#[derive(Debug, Clone)]
-pub enum Message {
-    //Control Messages
-    Connected,
-    Disconnected,
-    Unsubscribed,
-    Error(error::Error),
-
-    //Public Channels
-    BBO(BBO),
-    MarketSummary(MarketSummary),
-    OrderBook(OrderBook),
-    OrderBookDeltas(OrderBook),
-    Trades(Trade),
-    FundingData(FundingData),
-
-    //Private Channels
-    Orders(OrderUpdate),
-    Fills(Fill),
-    Position(Position),
-    Account(AccountInformation),
-    BalanceEvent(BalanceEvent),
-    FundingPayments(FundingPayment),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Channel {
-    //Public Channels
-    MarketSummary,
-    OrderBook {
-        market_symbol: String,
-        channel_name: Option<String>,
-        refresh_rate: String,
-        price_tick: Option<String>,
-    },
-    OrderBookDeltas {
-        market_symbol: String,
-    },
-    BBO {
-        market_symbol: String,
-    },
-    Trades {
-        market_symbol: String,
-    },
-    FundingData {
-        market_symbol: Option<String>,
-    },
-
-    //Private Channels
-    Orders {
-        market_symbol: Option<String>,
-    },
-    Fills {
-        market_symbol: Option<String>,
-    },
-    Position,
-    Account,
-    BalanceEvents,
-    FundingPayments {
-        market_symbol: Option<String>,
-    },
-}
-
-impl Channel {
-    fn channel_name(&self) -> String {
-        match self {
-            Channel::MarketSummary => "markets_summary".into(),
-            Channel::BBO { market_symbol } => format!("bbo.{market_symbol}"),
-            Channel::Trades { market_symbol } => format!("trades.{market_symbol}"),
-            Channel::OrderBook {
-                market_symbol,
-                channel_name,
-                refresh_rate,
-                price_tick,
-            } => format!(
-                "order_book.{}.{}@15@{}{}",
-                market_symbol,
-                channel_name
-                    .as_ref()
-                    .map(|s| s.as_str())
-                    .unwrap_or("snapshot"),
-                refresh_rate,
-                if let Some(tick) = price_tick {
-                    format!("@{}", tick)
-                } else {
-                    "".into()
-                }
-            ),
-            Channel::OrderBookDeltas { market_symbol } => {
-                format!("order_book.{}.deltas", market_symbol)
-            }
-            Channel::FundingData { market_symbol } => format!(
-                "funding_data.{}",
-                if let Some(s) = market_symbol {
-                    s
-                } else {
-                    "ALL"
-                }
-            ),
-
-            Channel::Orders { market_symbol } => format!(
-                "orders.{}",
-                if let Some(s) = market_symbol {
-                    s
-                } else {
-                    "ALL"
-                }
-            ),
-            Channel::Fills { market_symbol } => format!(
-                "fills.{}",
-                if let Some(s) = market_symbol {
-                    s
-                } else {
-                    "ALL"
-                }
-            ),
-            Channel::Position => "positions".into(),
-            Channel::Account => "account".into(),
-            Channel::BalanceEvents => "balance_events".into(),
-            Channel::FundingPayments { market_symbol } => {
-                format!(
-                    "funding_payments.{}",
-                    if let Some(s) = market_symbol {
-                        s
-                    } else {
-                        "ALL"
-                    }
-                )
-            }
-        }
-    }
-
-    fn parse_notification<T: jsonrpsee_core::DeserializeOwned>(
-        mut notification: Notification<Value>,
-        function: impl Fn(T) -> Message,
-    ) -> Message {
-        if let Some(data) = notification.params.get_mut("data") {
-            match serde_json::from_value::<T>(data.take()) {
-                Ok(value) => function(value),
-                Err(e) => Message::Error(error::Error::JsonParseError(e.to_string())),
-            }
-        } else {
-            Message::Error(error::Error::JsonParseError(format!(
-                "Notification missing data attribute {:?}",
-                notification
-            )))
-        }
-    }
-
-    fn to_message(&self, notification: Notification<Value>) -> Message {
-        match self {
-            Channel::MarketSummary => {
-                Self::parse_notification::<MarketSummary>(notification, Message::MarketSummary)
-            }
-            Channel::BBO { .. } => Self::parse_notification::<BBO>(notification, Message::BBO),
-            Channel::Trades { .. } => {
-                Self::parse_notification::<Trade>(notification, Message::Trades)
-            }
-            Channel::OrderBook { .. } => {
-                Self::parse_notification::<OrderBook>(notification, Message::OrderBook)
-            }
-            Channel::OrderBookDeltas { .. } => {
-                Self::parse_notification::<OrderBook>(notification, Message::OrderBookDeltas)
-            }
-            Channel::FundingData { .. } => {
-                Self::parse_notification::<FundingData>(notification, Message::FundingData)
-            }
-
-            Channel::Orders { .. } => {
-                Self::parse_notification::<OrderUpdate>(notification, Message::Orders)
-            }
-            Channel::Fills { .. } => Self::parse_notification::<Fill>(notification, Message::Fills),
-            Channel::Position => {
-                Self::parse_notification::<Position>(notification, Message::Position)
-            }
-            Channel::Account => {
-                Self::parse_notification::<AccountInformation>(notification, Message::Account)
-            }
-            Channel::BalanceEvents => {
-                Self::parse_notification::<BalanceEvent>(notification, Message::BalanceEvent)
-            }
-            Channel::FundingPayments { .. } => {
-                Self::parse_notification::<FundingPayment>(notification, Message::FundingPayments)
-            }
-        }
-    }
-}
+pub use subscription::{
+    AccountSubscription, BalanceEventsSubscription, BboSubscription, ChannelEvent,
+    FillsSubscription, FundingDataSubscription, FundingPaymentsSubscription,
+    MarketSummarySubscription, OrderBookDeltasSubscription, OrderBookSubscription,
+    OrdersSubscription, PositionSubscription, SubscriptionSpec, TradesSubscription,
+};
+pub use types::{Channel, Identifier, Message};
 
 enum WebsocketOperation {
     Subscribe(Channel, CallbackFn, Identifier),
@@ -230,7 +47,7 @@ pub struct WebsocketManager {
     sub_sender: UnboundedSender<WebsocketOperation>,
 }
 
-type CallbackFn = Box<dyn Fn(&Message) + Send + 'static>;
+type CallbackFn = Arc<dyn Fn(&Message) + Send + Sync + 'static>;
 
 impl WebsocketManager {
     pub async fn new(url: URL, rest_client: Option<Client>) -> Self {
@@ -252,6 +69,27 @@ impl WebsocketManager {
             .send(WebsocketOperation::Subscribe(channel, callback, identifier))
             .map_err(|e| Error::WebSocketSend(e.to_string()))?;
         Ok(identifier)
+    }
+
+    pub async fn subscribe_typed<S, F>(&self, spec: S, callback: F) -> Result<Identifier>
+    where
+        S: SubscriptionSpec,
+        F: for<'a> Fn(ChannelEvent<'a, S::Payload>) + Send + Sync + 'static,
+    {
+        let channel = spec.into_channel();
+        let handler: CallbackFn = Arc::new(move |message: &Message| match message {
+            Message::Connected => callback(ChannelEvent::Connected),
+            Message::Disconnected => callback(ChannelEvent::Disconnected),
+            Message::Unsubscribed => callback(ChannelEvent::Unsubscribed),
+            Message::Error(err) => callback(ChannelEvent::Error(err)),
+            _ => {
+                if let Some(data) = S::extract(message) {
+                    callback(ChannelEvent::Data(data));
+                }
+            }
+        });
+
+        self.subscribe(channel, handler).await
     }
 
     pub async fn unsubscribe(&self, identifier: Identifier) -> Result<()> {
@@ -460,7 +298,7 @@ impl WebsocketManager {
                                         if value.0 {
                                             callback(&Message::Connected);
                                         }
-                                        value.1.push( (channel, identifier, callback) );
+                                        value.1.push( (channel, identifier, Arc::clone(&callback)) );
                                     }
                                     Entry::Vacant(vacant_entry) => {
                                         let request = Self::request_channel("subscribe", channel_name.clone(), identifier);

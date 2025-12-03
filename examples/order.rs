@@ -1,10 +1,14 @@
-use std::time::Duration;
+use std::{fmt::Debug, time::Duration};
 
-use log::info;
+use log::{info, warn};
 use paradex::{
     rest::Client,
     structs::{ModifyOrderRequest, OrderRequest, OrderType, Side},
     url::URL,
+    ws::{
+        AccountSubscription, BalanceEventsSubscription, ChannelEvent, FillsSubscription,
+        FundingPaymentsSubscription, OrdersSubscription, PositionSubscription, WebsocketManager,
+    },
 };
 use rust_decimal::{Decimal, prelude::FromPrimitive};
 
@@ -46,57 +50,45 @@ async fn main() {
     info!("Balance {:?}", client_private.balance().await);
     info!("Positions {:?}", client_private.positions().await);
 
-    let manager = paradex::ws::WebsocketManager::new(
-        paradex::url::URL::Testnet,
+    let manager = WebsocketManager::new(
+        URL::Testnet,
         Some(Client::new(url, Some(private_key)).await.unwrap()),
     )
     .await;
     let orders_id = manager
-        .subscribe(
-            paradex::ws::Channel::Orders {
-                market_symbol: None,
-            },
-            Box::new(|message| info!("Received order update {message:?}")),
-        )
+        .subscribe_typed(OrdersSubscription::all(), |event| {
+            log_channel_event("Orders", event);
+        })
         .await
         .unwrap();
     let fills_id = manager
-        .subscribe(
-            paradex::ws::Channel::Fills {
-                market_symbol: None,
-            },
-            Box::new(|message| info!("Received fill {message:?}")),
-        )
+        .subscribe_typed(FillsSubscription::all(), |event| {
+            log_channel_event("Fills", event);
+        })
         .await
         .unwrap();
     let position_id = manager
-        .subscribe(
-            paradex::ws::Channel::Position,
-            Box::new(|message| info!("Received position {message:?}")),
-        )
+        .subscribe_typed(PositionSubscription, |event| {
+            log_channel_event("Positions", event);
+        })
         .await
         .unwrap();
     let account_id = manager
-        .subscribe(
-            paradex::ws::Channel::Account,
-            Box::new(|message| info!("Received account {message:?}")),
-        )
+        .subscribe_typed(AccountSubscription, |event| {
+            log_channel_event("Account", event);
+        })
         .await
         .unwrap();
     let balance_id = manager
-        .subscribe(
-            paradex::ws::Channel::BalanceEvents,
-            Box::new(|message| info!("Received balance event {message:?}")),
-        )
+        .subscribe_typed(BalanceEventsSubscription, |event| {
+            log_channel_event("Balance events", event);
+        })
         .await
         .unwrap();
     let funding_payments_id = manager
-        .subscribe(
-            paradex::ws::Channel::FundingPayments {
-                market_symbol: None,
-            },
-            Box::new(|message| info!("Received funding payment {message:?}")),
-        )
+        .subscribe_typed(FundingPaymentsSubscription::all(), |event| {
+            log_channel_event("Funding payments", event);
+        })
         .await
         .unwrap();
 
@@ -163,4 +155,14 @@ async fn main() {
 
     tokio::time::sleep(Duration::from_secs(5)).await;
     manager.stop().await.unwrap();
+}
+
+fn log_channel_event<'a, T: Debug>(label: &str, event: ChannelEvent<'a, T>) {
+    match event {
+        ChannelEvent::Connected => info!("{label}: connected"),
+        ChannelEvent::Disconnected => info!("{label}: disconnected"),
+        ChannelEvent::Unsubscribed => info!("{label}: unsubscribed"),
+        ChannelEvent::Error(err) => warn!("{label}: error {err:?}"),
+        ChannelEvent::Data(payload) => info!("{label}: {payload:?}"),
+    }
 }
