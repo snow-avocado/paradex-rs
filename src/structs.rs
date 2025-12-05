@@ -267,6 +267,103 @@ pub struct Delta1CrossMarginParams {
     pub mmf_factor: f64,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MarketChainDetails {
+    pub collateral_address: Option<String>,
+    pub contract_address: Option<String>,
+    pub fee_account_address: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub fee_maker: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub fee_taker: f64,
+    pub insurance_fund_address: String,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub liquidation_fee: f64,
+    pub oracle_address: String,
+    pub symbol: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct FeeWithCap {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub fee: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub fee_cap: f64,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub fee_floor: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MakerTakerFee {
+    pub maker_fee: FeeWithCap,
+    pub taker_fee: FeeWithCap,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MarketFeeConfig {
+    pub api_fee: MakerTakerFee,
+    pub interactive_fee: MakerTakerFee,
+    pub rpi_fee: MakerTakerFee,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OptionMarginParams {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub long_itm: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub premium_multiplier: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub short_itm: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub short_otm: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub short_put_cap: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OptionCrossMarginParams {
+    pub imf: OptionMarginParams,
+    pub mmf: OptionMarginParams,
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum KlineResolution {
     Min1 = 1,
@@ -380,6 +477,8 @@ pub struct OrderBookInteractiveResponse {
 pub struct MarketSummaryStatic {
     pub asset_kind: String,
     pub base_currency: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chain_details: Option<MarketChainDetails>,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
@@ -388,6 +487,9 @@ pub struct MarketSummaryStatic {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub delta1_cross_margin_params: Option<Delta1CrossMarginParams>,
     pub expiry_at: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fee_config: Option<MarketFeeConfig>,
+    pub funding_multiplier: f64,
     pub funding_period_hours: u16,
     #[serde(
         serialize_with = "serialize_f64_as_string",
@@ -418,6 +520,12 @@ pub struct MarketSummaryStatic {
     )]
     pub max_order_size: f64,
     #[serde(
+        default,
+        deserialize_with = "deserialize_string_to_f64",
+        serialize_with = "serialize_f64_as_string"
+    )]
+    pub max_slippage: f64,
+    #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
     )]
@@ -427,6 +535,9 @@ pub struct MarketSummaryStatic {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub min_notional: f64,
+    pub open_at: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub option_cross_margin_params: Option<OptionCrossMarginParams>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub option_type: Option<OptionType>,
     #[serde(
