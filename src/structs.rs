@@ -1218,6 +1218,7 @@ pub enum PositionSide {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Position {
+    pub account: String,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
@@ -1228,6 +1229,11 @@ pub struct Position {
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub average_entry_price_usd: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub average_exit_price: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
@@ -1261,6 +1267,16 @@ pub struct Position {
     )]
     pub size: f64,
     pub status: PositionStatus,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub realized_positional_funding_pnl: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub realized_positional_pnl: f64,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
