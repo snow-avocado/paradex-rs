@@ -85,6 +85,11 @@ impl WebsocketManager {
             _ => {
                 if let Some(data) = S::extract(message) {
                     callback(ChannelEvent::Data(data));
+                } else {
+                    warn!(
+                        "Received message that does not match subscription spec: {:?}",
+                        message
+                    );
                 }
             }
         });
