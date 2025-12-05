@@ -1,8 +1,8 @@
+use crate::error;
 use crate::structs::{
     AccountInformation, BBO, BalanceEvent, Fill, FundingData, FundingPayment, MarketSummary,
     OrderBook, OrderUpdate, Position, Trade,
 };
-use crate::error;
 use jsonrpsee_types::Notification;
 use serde_json::Value;
 use std::string::String;
