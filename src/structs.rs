@@ -183,64 +183,133 @@ impl OnboardingRequest {
     }
 }
 
+/// Market summary data - used for both REST and WebSocket
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MarketSummary {
     pub symbol: String,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
     pub mark_price: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub last_traded_price: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub bid: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub ask: f64,
+    pub greeks: Greeks,
     #[serde(
         default,
-        deserialize_with = "deserialize_optional_string_to_f64",
-        serialize_with = "serialize_optional_f64_as_string"
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64"
     )]
-    pub volume_24: Option<f64>,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub last_traded_price: Option<f64>,
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64"
+    )]
+    pub bid: Option<f64>,
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64"
+    )]
+    pub ask: Option<f64>,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub volume_24h: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
     pub total_volume: f64,
     pub created_at: u64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub underlying_price: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub open_interest: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub funding_rate: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
-    pub price_change_rate_24h: f64,
     #[serde(
         default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64"
+    )]
+    pub underlying_price: Option<f64>,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub open_interest: f64,
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64"
+    )]
+    pub funding_rate: Option<f64>,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price_change_rate_24h: f64,
+    /// Top-level delta (duplicates greeks.delta for convenience)
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
         deserialize_with = "deserialize_optional_string_to_f64",
-        serialize_with = "serialize_optional_f64_as_string"
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub delta: Option<f64>,
+    /// Implied volatility fields (options only)
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64",
+        skip_serializing_if = "Option::is_none"
     )]
     pub bid_iv: Option<f64>,
     #[serde(
         default,
+        serialize_with = "serialize_optional_f64_as_string",
         deserialize_with = "deserialize_optional_string_to_f64",
-        serialize_with = "serialize_optional_f64_as_string"
+        skip_serializing_if = "Option::is_none"
     )]
     pub ask_iv: Option<f64>,
     #[serde(
         default,
+        serialize_with = "serialize_optional_f64_as_string",
         deserialize_with = "deserialize_optional_string_to_f64",
-        serialize_with = "serialize_optional_f64_as_string"
+        skip_serializing_if = "Option::is_none"
     )]
     pub last_iv: Option<f64>,
     #[serde(
         default,
+        serialize_with = "serialize_optional_f64_as_string",
         deserialize_with = "deserialize_optional_string_to_f64",
-        serialize_with = "serialize_optional_f64_as_string"
+        skip_serializing_if = "Option::is_none"
     )]
-    pub delta: Option<f64>,
+    pub last_iv_traded_price: Option<f64>,
+    #[serde(
+        default,
+        serialize_with = "serialize_optional_f64_as_string",
+        deserialize_with = "deserialize_optional_string_to_f64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub mark_iv: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OptionType {
     CALL,
     PUT,
+}
+
+/// Asset kind for a market
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AssetKind {
+    Perp,
+    PerpOption,
+}
+
+/// Market kind (margin type)
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MarketKind {
+    Cross,
+    Isolated,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -473,9 +542,10 @@ pub struct OrderBookInteractiveResponse {
     pub seq_no: u64,
 }
 
+/// Static market configuration data
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct MarketSummaryStatic {
-    pub asset_kind: String,
+pub struct MarketStatic {
+    pub asset_kind: AssetKind,
     pub base_currency: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chain_details: Option<MarketChainDetails>,
@@ -502,7 +572,7 @@ pub struct MarketSummaryStatic {
         serialize_with = "serialize_optional_f64_as_string"
     )]
     pub iv_bands_width: Option<f64>,
-    pub market_kind: String,
+    pub market_kind: MarketKind,
     #[serde(
         serialize_with = "serialize_f64_as_string",
         deserialize_with = "deserialize_string_to_f64"
@@ -576,6 +646,25 @@ pub struct MarketSummaryStatic {
     pub strike_price: Option<f64>,
     pub symbol: String,
     pub tags: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Greeks {
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub delta: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub gamma: f64,
+    #[serde(
+        serialize_with = "serialize_f64_as_string",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub vega: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
