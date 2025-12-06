@@ -13,4 +13,17 @@ async fn main() {
     // Get and print all available markets
     let markets = client.markets().await.unwrap();
     info!("Markets: {:#?}", markets);
+    let markets_summary = client.markets_summary("USDC".to_string()).await.unwrap();
+    info!("Markets Summary USDC: {:#?}", markets_summary);
+    let markets_summary = client
+        .markets_summary("BTC-USD-PERP".to_string())
+        .await
+        .unwrap();
+    info!("Markets Summary BTC-USD-PERP: {:#?}", markets_summary);
+    // Test an option to see IV fields
+    let markets_summary = client
+        .markets_summary("BTC-USD-100000-C".to_string())
+        .await
+        .unwrap();
+    info!("Markets Summary BTC-USD-100000-C: {:#?}", markets_summary);
 }

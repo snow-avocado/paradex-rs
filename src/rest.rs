@@ -25,7 +25,7 @@ use crate::structs::OnboardingRequest;
 use crate::structs::{
     AccountInformation, AccountMarginConfigurations, AccountMarginUpdate,
     AccountMarginUpdateResponse, BBO, Balances, CancelByMarketResponse, CursorResult, Fill,
-    FundingPayment, JWTToken, Kline, KlineParams, MarketSummaryStatic, ModifyOrderRequest,
+    FundingPayment, JWTToken, Kline, KlineParams, MarketStatic, MarketSummary, ModifyOrderRequest,
     OrderBookInteractiveResponse, OrderBookParams, OrderBookResponse, OrderRequest, OrderUpdate,
     OrderUpdates, Positions, RestError, ResultsContainer, SystemConfig, SystemState,
     SystemTimeResponse, Trade, Transfer, TransferStatus,
@@ -214,19 +214,34 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A vector of MarketSummaryStatic structs representing the markets
+    /// A vector of MarketStatic structs representing the markets
     ///
     /// # Errors
     ///
     /// If the markets cannot be retrieved
-    pub async fn markets(&self) -> Result<Vec<MarketSummaryStatic>> {
+    pub async fn markets(&self) -> Result<Vec<MarketStatic>> {
         self.request(Method::Get::<()>(vec![]), "/v1/markets".into(), None)
             .await
-            .map(
-                |result_container: ResultsContainer<Vec<MarketSummaryStatic>>| {
-                    result_container.results
-                },
-            )
+            .map(|result_container: ResultsContainer<Vec<MarketStatic>>| result_container.results)
+    }
+
+    /// Get the list of markets summary on the exchange
+    ///
+    /// # Returns
+    ///
+    /// A vector of MarketSummary structs representing the market summaries
+    ///
+    /// # Errors
+    ///
+    /// If the markets cannot be retrieved
+    pub async fn markets_summary(&self, market: String) -> Result<Vec<MarketSummary>> {
+        self.request(
+            Method::Get::<()>(vec![("market".to_string(), market)]),
+            "/v1/markets/summary".into(),
+            None,
+        )
+        .await
+        .map(|result_container: ResultsContainer<Vec<MarketSummary>>| result_container.results)
     }
 
     /// Get the list of Klines for a symbol
